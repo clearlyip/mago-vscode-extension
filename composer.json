@@ -1,0 +1,54 @@
+{
+  "name": "clearlyip/mago-lsp",
+  "description": "Installs the Mago language-server binary (built with --features language-server) into vendor/bin/mago-lsp.",
+  "type": "composer-plugin",
+  "license": "MIT",
+  "homepage": "https://github.com/clearlyip/mago-vscode-extension",
+  "support": {
+    "issues": "https://github.com/clearlyip/mago-vscode-extension/issues",
+    "source": "https://github.com/clearlyip/mago-vscode-extension"
+  },
+  "require": {
+    "php": ">=8.1",
+    "ext-zip": "*",
+    "composer-plugin-api": "^2.0"
+  },
+  "require-dev": {
+    "composer/composer": "^2.0"
+  },
+  "suggest": {
+    "carthage-software/mago": "The standard mago binary (without language server support)"
+  },
+  "extra": {
+    "class": "ClearlyIP\\MagoLsp\\Plugin"
+  },
+  "autoload": {
+    "psr-4": {
+      "ClearlyIP\\MagoLsp\\": "plugin/src/"
+    }
+  },
+  "archive": {
+    "exclude": [
+      ".claude",
+      ".github",
+      ".vscode",
+      "dist",
+      "node_modules",
+      "src",
+      "vendor",
+      "AGENTS.md",
+      "biome.json",
+      "CLAUDE.md",
+      "esbuild.js",
+      ".gitignore",
+      ".vscodeignore",
+      "package.json",
+      "package-lock.json",
+      "README.md",
+      "tsconfig.json",
+      "composer.lock",
+      "**/.DS_Store",
+      "test-project"
+    ]
+  }
+}

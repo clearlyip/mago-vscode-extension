@@ -1,0 +1,12 @@
+.vscode/**
+.vscode-test/**
+src/**
+plugin/**
+.gitignore
+biome.json
+esbuild.js
+tsconfig.json
+composer.json
+node_modules/**
+**/.DS_Store
+test-project/**

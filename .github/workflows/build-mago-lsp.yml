@@ -1,0 +1,219 @@
+name: Build Mago with Language Server
+
+on:
+  schedule:
+    # Check for a new upstream release every day at 06:00 UTC
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Mago version tag to build (e.g. 1.29.0). Leave empty to use latest.'
+        required: false
+        default: ''
+
+jobs:
+  # ─── Phase 1: decide whether anything needs building ─────────────────────────
+  check:
+    name: Check upstream release
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.resolve.outputs.version }}
+      should_build: ${{ steps.compare.outputs.should_build }}
+
+    steps:
+      - name: Resolve target version
+        id: resolve
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [[ -n "${{ inputs.version }}" ]]; then
+            VERSION="${{ inputs.version }}"
+          else
+            VERSION=$(gh api repos/carthage-software/mago/releases/latest --jq '.tag_name')
+          fi
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "Targeting mago ${VERSION}"
+
+      - name: Check if this version is already released here
+        id: compare
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${{ steps.resolve.outputs.version }}"
+          STATUS=$(gh api \
+            "repos/${{ github.repository }}/releases/tags/${VERSION}" \
+            --silent 2>&1 && echo "exists" || echo "missing")
+          if [[ "$STATUS" == "exists" ]]; then
+            echo "Release ${VERSION} already exists — skipping build."
+            echo "should_build=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Release ${VERSION} not found — will build."
+            echo "should_build=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  # ─── Phase 2: compile for every target ───────────────────────────────────────
+  build:
+    name: ${{ matrix.job.target }}
+    runs-on: ${{ matrix.job.os }}
+    needs: check
+    if: needs.check.outputs.should_build == 'true'
+
+    env:
+      VERSION: ${{ needs.check.outputs.version }}
+      BUILD_CMD: cargo
+
+    strategy:
+      fail-fast: false
+      matrix:
+        job:
+          # Tier 1 — native runners, no cross-compilation needed
+          - { target: x86_64-pc-windows-msvc, os: windows-latest }
+          - { target: aarch64-apple-darwin,   os: macos-latest   }
+          - { target: x86_64-apple-darwin,    os: macos-latest   }
+
+          # Linux — cross-compiled via cross-rs (pure-Rust feature, no extra syslibs needed)
+          - { target: x86_64-unknown-linux-gnu,       os: ubuntu-latest, use_cross: true }
+          - { target: x86_64-unknown-linux-musl,      os: ubuntu-latest, use_cross: true }
+          - { target: aarch64-unknown-linux-gnu,      os: ubuntu-latest, use_cross: true }
+          - { target: aarch64-unknown-linux-musl,     os: ubuntu-latest, use_cross: true }
+          - { target: arm-unknown-linux-gnueabi,      os: ubuntu-latest, use_cross: true }
+          - { target: arm-unknown-linux-gnueabihf,    os: ubuntu-latest, use_cross: true }
+          - { target: arm-unknown-linux-musleabi,     os: ubuntu-latest, use_cross: true }
+          - { target: arm-unknown-linux-musleabihf,   os: ubuntu-latest, use_cross: true }
+          - { target: armv7-unknown-linux-gnueabihf,  os: ubuntu-latest, use_cross: true }
+          - { target: armv7-unknown-linux-musleabihf, os: ubuntu-latest, use_cross: true }
+
+          # Tier 2
+          - { target: x86_64-pc-windows-gnu,  os: windows-latest }
+          - { target: x86_64-unknown-freebsd, os: ubuntu-latest, use_cross: true }
+
+    steps:
+      - name: Checkout mago ${{ env.VERSION }}
+        uses: actions/checkout@v4
+        with:
+          repository: carthage-software/mago
+          ref: ${{ env.VERSION }}
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.job.target }}
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          # Version in key so each mago release gets a warm-but-isolated cache
+          key: lsp-${{ matrix.job.target }}-${{ env.VERSION }}
+          cache-on-failure: true
+
+      - name: Install cross
+        if: matrix.job.use_cross
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cross
+
+      - name: Switch build command to cross
+        if: matrix.job.use_cross
+        shell: bash
+        run: echo "BUILD_CMD=cross" >> "$GITHUB_ENV"
+
+      - name: Build with language-server feature
+        shell: bash
+        run: |
+          $BUILD_CMD build \
+            --locked \
+            --release \
+            --target ${{ matrix.job.target }} \
+            --features language-server
+
+      - name: Package binary
+        id: package
+        shell: bash
+        run: |
+          TARGET="${{ matrix.job.target }}"
+          EXE=""
+          PKG_EXT=".tar.gz"
+          case "$TARGET" in
+            *-pc-windows-msvc) EXE=".exe"; PKG_EXT=".zip" ;;
+            *-pc-windows-*)    EXE=".exe" ;;
+          esac
+
+          BIN="target/${TARGET}/release/mago${EXE}"
+          PKG_NAME="mago-lsp-${VERSION}-${TARGET}${PKG_EXT}"
+
+          mkdir -p staging
+          cp "$BIN" "staging/mago${EXE}"
+
+          pushd staging
+          case "$PKG_EXT" in
+            .zip)    7z a "$PKG_NAME" "mago${EXE}" ;;
+            .tar.gz) tar czf "$PKG_NAME" "mago${EXE}" ;;
+          esac
+          popd
+
+          echo "PKG_NAME=${PKG_NAME}"        >> "$GITHUB_OUTPUT"
+          echo "PKG_PATH=staging/${PKG_NAME}" >> "$GITHUB_OUTPUT"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.package.outputs.PKG_NAME }}
+          path: ${{ steps.package.outputs.PKG_PATH }}
+
+  # ─── Phase 3: publish a release with all binaries ────────────────────────────
+  release:
+    name: Publish GitHub release
+    runs-on: ubuntu-latest
+    needs: [check, build]
+    if: needs.check.outputs.should_build == 'true'
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts/
+          merge-multiple: true
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.check.outputs.version }}
+          name: "mago ${{ needs.check.outputs.version }} (language-server)"
+          # Mark pre-release: the LSP feature has no stability guarantees before mago 2.0
+          prerelease: true
+          body: |
+            Mago `${{ needs.check.outputs.version }}` compiled with `--features language-server`.
+
+            > **Stability notice:** The Mago language server is an unstable, feature-gated preview. Its
+            > advertised capabilities, wire protocol, and CLI flags may change or be removed without
+            > notice before Mago 2.0. There are no compatibility guarantees until that release.
+
+            ## Installation
+
+            1. Download the archive for your platform and extract the `mago` binary.
+            2. Place it somewhere on your `PATH` (or note its full path).
+            3. In VS Code, set `mago.executablePath` to the path of this binary.
+
+            ## Platforms
+
+            | Archive | Platform |
+            |---|---|
+            | `mago-lsp-*-x86_64-pc-windows-msvc.zip` | Windows x64 (MSVC) |
+            | `mago-lsp-*-x86_64-pc-windows-gnu.tar.gz` | Windows x64 (MinGW) |
+            | `mago-lsp-*-aarch64-apple-darwin.tar.gz` | macOS Apple Silicon |
+            | `mago-lsp-*-x86_64-apple-darwin.tar.gz` | macOS Intel |
+            | `mago-lsp-*-x86_64-unknown-linux-gnu.tar.gz` | Linux x64 (glibc) |
+            | `mago-lsp-*-x86_64-unknown-linux-musl.tar.gz` | Linux x64 (musl, static) |
+            | `mago-lsp-*-aarch64-unknown-linux-gnu.tar.gz` | Linux ARM64 (glibc) |
+            | `mago-lsp-*-aarch64-unknown-linux-musl.tar.gz` | Linux ARM64 (musl, static) |
+            | `mago-lsp-*-x86_64-unknown-freebsd.tar.gz` | FreeBSD x64 |
+            | *(arm/armv7 archives)* | Raspberry Pi / embedded Linux |
+
+            ## Upstream
+
+            Full changelog and release notes: [carthage-software/mago@${{ needs.check.outputs.version }}](https://github.com/carthage-software/mago/releases/tag/${{ needs.check.outputs.version }})
+          files: artifacts/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

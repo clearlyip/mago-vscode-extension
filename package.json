@@ -1,0 +1,139 @@
+{
+  "name": "mago-vscode-extension",
+  "displayName": "Mago",
+  "description": "PHP linting, formatting, and analysis via the Mago language server",
+  "version": "0.1.0",
+  "publisher": "clearlyip",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/clearlyip/mago-vscode-extension"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Linters",
+    "Formatters",
+    "Programming Languages"
+  ],
+  "keywords": [
+    "php",
+    "linter",
+    "formatter",
+    "static analysis",
+    "mago"
+  ],
+  "activationEvents": [
+    "onLanguage:php"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "configuration": {
+      "title": "Mago",
+      "properties": {
+        "mago.executablePath": {
+          "type": "string",
+          "default": "mago",
+          "description": "Path to the mago binary built with language-server support. When set to the default ('mago'), the extension first looks for vendor/bin/mago-lsp installed by the clearlyip/mago-lsp Composer package, then falls back to 'mago' on PATH.",
+          "scope": "machine-overridable"
+        },
+        "mago.configPath": {
+          "type": "string",
+          "default": "",
+          "description": "Path to mago.toml configuration file. If empty, mago will look for mago.toml in the workspace root.",
+          "scope": "resource"
+        },
+        "mago.noAnalyzer": {
+          "type": "boolean",
+          "default": false,
+          "description": "Disable the static analyzer subsystem.",
+          "scope": "resource"
+        },
+        "mago.noLinter": {
+          "type": "boolean",
+          "default": false,
+          "description": "Disable the linter subsystem (no lint diagnostics).",
+          "scope": "resource"
+        },
+        "mago.noFormatter": {
+          "type": "boolean",
+          "default": false,
+          "description": "Disable the formatter subsystem ('Format Document' will be unavailable).",
+          "scope": "resource"
+        },
+        "mago.logLevel": {
+          "type": "string",
+          "default": "info",
+          "enum": [
+            "error",
+            "warn",
+            "info",
+            "debug",
+            "trace"
+          ],
+          "description": "Output channel log verbosity.",
+          "scope": "window"
+        },
+        "mago.maxRestartCount": {
+          "type": "number",
+          "default": 5,
+          "minimum": 0,
+          "description": "Maximum number of times the language server will be automatically restarted on failure.",
+          "scope": "window"
+        },
+        "mago.hideStatusBarWhenIdle": {
+          "type": "boolean",
+          "default": false,
+          "description": "Hide the Mago status bar item when the server is idle.",
+          "scope": "window"
+        },
+        "mago.trace.server": {
+          "type": "string",
+          "enum": [
+              "off",
+              "messages",
+              "verbose"
+          ],
+          "default": "off",
+          "description": "Traces the communication between VSCode and the Psalm language server.",
+          "scope": "window"
+        }
+      }
+    },
+    "commands": [
+      {
+        "command": "mago.restartServer",
+        "title": "Mago: Restart Language Server"
+      },
+      {
+        "command": "mago.stopServer",
+        "title": "Mago: Stop Language Server"
+      },
+      {
+        "command": "mago.showOutputChannel",
+        "title": "Mago: Show Output Channel"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run check && npm run package",
+    "compile": "node esbuild.js",
+    "watch": "node esbuild.js --watch",
+    "package": "node esbuild.js --production",
+    "check": "tsc --noEmit && biome check",
+    "lint": "biome lint",
+    "format": "biome format --write",
+    "test": "vscode-test"
+  },
+  "dependencies": {
+    "vscode-languageclient": "^9.0.1"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.4.15",
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.85.0",
+    "esbuild": "^0.28.0",
+    "typescript": "^5.4.0"
+  }
+}

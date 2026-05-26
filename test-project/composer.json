@@ -1,0 +1,27 @@
+{
+  "name": "clearlyip/mago-lsp-test-project",
+  "description": "Test PHP project for developing the Mago VS Code extension",
+  "type": "project",
+  "minimum-stability": "dev",
+  "require": {
+    "php": ">=8.1",
+    "clearlyip/mago-lsp": "*"
+  },
+  "repositories": [
+    {
+      "type": "path",
+      "url": "../",
+      "options": {
+        "symlink": false
+      }
+    }
+  ],
+  "extra": {
+    "enable-patching": true
+  },
+  "config": {
+    "allow-plugins": {
+      "clearlyip/mago-lsp": true
+    }
+  }
+}

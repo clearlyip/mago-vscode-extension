@@ -1,0 +1,8 @@
+node_modules/
+dist/
+*.vsix
+.vscode-test/
+vendor/
+test-project/vendor/
+test-project/.vscode/
+.claude
