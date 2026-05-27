@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="https://raw.githubusercontent.com/carthage-software/mago/refs/heads/main/docs/static/img/banner.svg" alt="Mago Banner" width="480" />
+  <img src="https://raw.githubusercontent.com/clearlyip/mago-vscode-extension/refs/heads/master/docs/static/img/banner.png" alt="Mago Banner" width="480" />
 </div>
 
 <div align="center">
@@ -19,6 +19,20 @@ PHP linting, formatting, and static analysis powered by the [Mago](https://githu
 ## Overview
 
 This extension integrates [Mago](https://mago.carthage.software) — a high-performance PHP linter, formatter, and static analyzer written in Rust — into Visual Studio Code via the Language Server Protocol. It provides real-time diagnostics, code formatting, hover information, completion, inlay hints, and code lenses for PHP files.
+
+## Why This Extension
+
+Several unofficial Mago extensions exist on the VS Code Marketplace. This extension is different because it communicates with Mago via the **official Language Server Protocol** rather than spawning the Mago CLI binary on every operation.
+
+|                           | This Extension (LSP)                        | Unofficial Extensions (CLI)                  |
+| ------------------------- | ------------------------------------------- | -------------------------------------------- |
+| **Server model**          | Persistent language server process          | Spawns `mago` binary per file save / command |
+| **Startup cost**          | One-time on activation                      | Every save, every command                    |
+| **Real-time diagnostics** | Incremental, as-you-type                    | On save (or manual trigger)                  |
+| **LSP features**          | Hover, completion, inlay hints, code lenses | Diagnostics only                             |
+| **Analysis state**        | Persistent across edits                     | Fresh process, no state reuse                |
+
+Many other extensions work by invoking the Mago CLI for each lint, analyze, or format operation. This means the binary must start up, parse the file, and shut down repeatedly. The LSP approach keeps a single server process running that maintains analysis state and responds incrementally to edits, resulting in lower latency and richer editor integration.
 
 ## Prerequisites
 
@@ -57,24 +71,24 @@ code --install-extension mago-0.1.0.vsix
 
 All settings are under the `mago` namespace in VS Code settings.
 
-| Setting | Default | Description |
-|---|---|---|
-| `mago.executablePath` | `"mago"` | Path to the Mago binary. Accepts an absolute path, a workspace-relative path (e.g. `./bin/mago`), or a name on `PATH`. When left at default, the extension first checks for `vendor/bin/mago-lsp` installed by the Composer package. |
-| `mago.configPath` | `""` | Path to `mago.toml`. If empty, Mago searches the workspace root. |
-| `mago.noAnalyzer` | `false` | Disable the static analyzer. Hover types, completion, inlay hints, and code lenses will be degraded or unavailable. |
-| `mago.noLinter` | `false` | Disable the linter. No lint diagnostics or quick-fix code actions. |
-| `mago.noFormatter` | `false` | Disable the formatter. Format Document will be unavailable for PHP files. |
-| `mago.logLevel` | `"info"` | Output channel verbosity: `error`, `warn`, `info`, `debug`, or `trace`. |
-| `mago.maxRestartCount` | `5` | Maximum automatic restarts after a server crash before giving up. |
-| `mago.hideStatusBarWhenIdle` | `false` | Hide the status bar item when the server is idle. |
+| Setting                      | Default  | Description                                                                                                                                                                                                                          |
+| ---------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `mago.executablePath`        | `"mago"` | Path to the Mago binary. Accepts an absolute path, a workspace-relative path (e.g. `./bin/mago`), or a name on `PATH`. When left at default, the extension first checks for `vendor/bin/mago-lsp` installed by the Composer package. |
+| `mago.configPath`            | `""`     | Path to `mago.toml`. If empty, Mago searches the workspace root.                                                                                                                                                                     |
+| `mago.noAnalyzer`            | `false`  | Disable the static analyzer. Hover types, completion, inlay hints, and code lenses will be degraded or unavailable.                                                                                                                  |
+| `mago.noLinter`              | `false`  | Disable the linter. No lint diagnostics or quick-fix code actions.                                                                                                                                                                   |
+| `mago.noFormatter`           | `false`  | Disable the formatter. Format Document will be unavailable for PHP files.                                                                                                                                                            |
+| `mago.logLevel`              | `"info"` | Output channel verbosity: `error`, `warn`, `info`, `debug`, or `trace`.                                                                                                                                                              |
+| `mago.maxRestartCount`       | `5`      | Maximum automatic restarts after a server crash before giving up.                                                                                                                                                                    |
+| `mago.hideStatusBarWhenIdle` | `false`  | Hide the status bar item when the server is idle.                                                                                                                                                                                    |
 
 ## Commands
 
-| Command | Description |
-|---|---|
+| Command                           | Description                                                   |
+| --------------------------------- | ------------------------------------------------------------- |
 | **Mago: Restart Language Server** | Stop and restart the server (picks up configuration changes). |
-| **Mago: Stop Language Server** | Stop the server without restarting. |
-| **Mago: Show Output Channel** | Open the Mago output panel for logs and diagnostics. |
+| **Mago: Stop Language Server**    | Stop the server without restarting.                           |
+| **Mago: Show Output Channel**     | Open the Mago output panel for logs and diagnostics.          |
 
 ## Automatic restarts
 

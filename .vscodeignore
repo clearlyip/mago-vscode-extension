@@ -10,3 +10,9 @@ composer.json
 node_modules/**
 **/.DS_Store
 test-project/**
+AGENTS.md
+CLAUDE.md
+docs/**
+.github/**
+vendor/**
+composer.lock

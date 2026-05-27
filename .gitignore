@@ -6,3 +6,4 @@ vendor/
 test-project/vendor/
 test-project/.vscode/
 .claude
+test-project/composer.lock

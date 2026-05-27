@@ -4,32 +4,99 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "17c37859ff79f3d8ebca53d930697b84",
-    "packages": [
+    "content-hash": "38f18afc5a1d9cb2b8a2940330353ae4",
+    "packages": [],
+    "packages-dev": [
+        {
+            "name": "carthage-software/mago",
+            "version": "1.29.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/carthage-software/mago.git",
+                "reference": "8aab53f6d004f9a6e85128c365d3d28737fdb272"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/carthage-software/mago/zipball/8aab53f6d004f9a6e85128c365d3d28737fdb272",
+                "reference": "8aab53f6d004f9a6e85128c365d3d28737fdb272",
+                "shasum": ""
+            },
+            "require": {
+                "php": "~8.1 || ~8.2 || ~8.3 || ~8.4 || ~8.5 || ~8.6"
+            },
+            "suggest": {
+                "ext-curl": "To show binary download progress"
+            },
+            "bin": [
+                "composer/bin/mago"
+            ],
+            "type": "library",
+            "autoload": {
+                "files": [
+                    "composer/src/functions.php",
+                    "composer/src/internal.php"
+                ],
+                "psr-4": {
+                    "Mago\\": "composer/src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT OR Apache-2.0"
+            ],
+            "authors": [
+                {
+                    "name": "Saif Eddin Gmati",
+                    "email": "azjezz@carthage.software"
+                }
+            ],
+            "description": "Mago is a toolchain for PHP that aims to provide a set of tools to help developers write better code.",
+            "keywords": [
+                "dev"
+            ],
+            "support": {
+                "issues": "https://github.com/carthage-software/mago/issues",
+                "source": "https://github.com/carthage-software/mago/tree/1.29.0"
+            },
+            "funding": [
+                {
+                    "url": "https://github.com/azjezz",
+                    "type": "github"
+                }
+            ],
+            "time": "2026-05-23T18:53:33+00:00"
+        },
         {
             "name": "clearlyip/mago-lsp",
-            "version": "dev-main",
+            "version": "dev-master",
             "dist": {
                 "type": "path",
                 "url": "..",
-                "reference": "6db51556d3e7b6a88392f746fa0528ea18d91eaa"
+                "reference": "e7c24296a44f5f4cdae3c5d10a5d98c01a22c599"
             },
             "require": {
                 "composer-plugin-api": "^2.0",
-                "ext-zip": "*",
                 "php": ">=8.1"
             },
             "require-dev": {
                 "composer/composer": "^2.0"
             },
             "suggest": {
-                "carthage-software/mago": "The standard mago binary (without language server support)"
+                "carthage-software/mago": "The standard mago binary (without language server support)",
+                "ext-curl": "Enables download progress display when fetching the mago-lsp binary",
+                "ext-zip": "Required on Windows to extract the mago-lsp binary archive"
             },
+            "bin": [
+                "plugin/bin/mago-lsp"
+            ],
             "type": "composer-plugin",
             "extra": {
                 "class": "ClearlyIP\\MagoLsp\\Plugin"
             },
             "autoload": {
+                "files": [
+                    "plugin/src/internal.php"
+                ],
                 "psr-4": {
                     "ClearlyIP\\MagoLsp\\": "plugin/src/"
                 }
@@ -54,7 +121,8 @@
                     "README.md",
                     "tsconfig.json",
                     "composer.lock",
-                    "**/.DS_Store"
+                    "**/.DS_Store",
+                    "test-project"
                 ]
             },
             "license": [
@@ -67,16 +135,16 @@
                 "source": "https://github.com/clearlyip/mago-vscode-extension"
             },
             "transport-options": {
-                "symlink": false,
                 "relative": true
             }
         }
     ],
-    "packages-dev": [],
     "aliases": [],
     "minimum-stability": "dev",
-    "stability-flags": {},
-    "prefer-stable": false,
+    "stability-flags": {
+        "clearlyip/mago-lsp": 20
+    },
+    "prefer-stable": true,
     "prefer-lowest": false,
     "platform": {
         "php": ">=8.1"

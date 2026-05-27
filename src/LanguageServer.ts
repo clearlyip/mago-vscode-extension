@@ -22,6 +22,26 @@ import { ServerStatus, type StatusBar } from './StatusBar';
 // vendor/bin/mago-lsp is installed by the clearlyip/mago-lsp Composer package.
 const VENDOR_CANDIDATES = ['vendor/bin/mago-lsp', 'vendor/bin/mago-lsp.exe'];
 
+function parseTomlStringArray(content: string, section: string, key: string): string[] {
+    const sectionMatch = content.match(new RegExp(`\\[${section}\\]([\\s\\S]*?)(?=\\n\\[|$)`));
+    if (!sectionMatch) return [];
+    const arrayMatch = sectionMatch[1].match(new RegExp(`\\b${key}\\s*=\\s*\\[([^\\]]*)\\]`));
+    if (!arrayMatch) return [];
+    return [...arrayMatch[1].matchAll(/"([^"]*)"/g)].map((m) => m[1]);
+}
+
+async function readMagoSourceConfig(configFilePath: string): Promise<{ paths: string[]; excludes: string[] }> {
+    try {
+        const content = await fs.promises.readFile(configFilePath, 'utf-8');
+        return {
+            paths: parseTomlStringArray(content, 'source', 'paths'),
+            excludes: parseTomlStringArray(content, 'source', 'excludes'),
+        };
+    } catch {
+        return { paths: [], excludes: [] };
+    }
+}
+
 function resolveMagoPath(configured: string, workspacePath: string): string {
     if (path.isAbsolute(configured)) {
         return configured;
@@ -175,21 +195,58 @@ export class LanguageServer {
             return;
         }
 
-        const args = this.buildServerArgs(config);
+        const configuredWorkspace = config.get<string>('workspace');
+        const cwd = configuredWorkspace ? path.resolve(this.workspacePath, configuredWorkspace) : this.workspacePath;
+        const args = this.buildServerArgs(config, cwd);
         this.logger.logInfo(`Starting mago language server: ${execPath} ${args.join(' ')}`);
+        this.logger.logInfo(`Server working directory: ${cwd}`);
 
-        const serverOptions: ServerOptions = () => this.spawnServer(execPath, args);
+        const serverOptions: ServerOptions = () => this.spawnServer(execPath, args, cwd);
 
         const maxRestarts = config.get<number>('maxRestartCount') ?? 5;
         const errorHandler = new MagoErrorHandler(maxRestarts, this.logger, this.statusBar);
 
+        const clientWorkspaceFolder: vscode.WorkspaceFolder | undefined = configuredWorkspace
+            ? { uri: vscode.Uri.file(cwd), name: path.basename(cwd), index: 0 }
+            : undefined;
+
+        const watchBase = clientWorkspaceFolder?.uri ?? vscode.Uri.file(this.workspacePath);
+
+        const explicitConfigPath = config.get<string>('configPath');
+        const resolvedConfigPath = explicitConfigPath
+            ? path.resolve(cwd, explicitConfigPath)
+            : path.join(cwd, 'mago.toml');
+        const { paths: sourcePaths, excludes: sourceExcludes } = await readMagoSourceConfig(resolvedConfigPath);
+
+        // Filter paths that are wholly covered by an exclude entry, then build one watcher per path.
+        // VS Code watchers have no negation support, so partial sub-path exclusions are handled server-side by Mago.
+        const activePaths =
+            sourcePaths.length > 0
+                ? sourcePaths.filter((p) => !sourceExcludes.some((ex) => p === ex || p.startsWith(ex)))
+                : [];
+        const phpWatchers =
+            activePaths.length > 0
+                ? activePaths.map((p) =>
+                      vscode.workspace.createFileSystemWatcher(
+                          new vscode.RelativePattern(watchBase, `${p.replace(/\/$/, '')}/**/*.php`),
+                      ),
+                  )
+                : [vscode.workspace.createFileSystemWatcher(new vscode.RelativePattern(watchBase, '**/*.php'))];
+
+        this.logger.logInfo(
+            activePaths.length > 0
+                ? `Watching PHP files in: ${activePaths.join(', ')}`
+                : 'Watching all PHP files in workspace',
+        );
+
         const clientOptions: LanguageClientOptions = {
             documentSelector: [{ scheme: 'file', language: 'php' }],
+            workspaceFolder: clientWorkspaceFolder,
             synchronize: {
                 fileEvents: [
-                    vscode.workspace.createFileSystemWatcher('**/*.php'),
-                    vscode.workspace.createFileSystemWatcher('**/mago.toml'),
-                    vscode.workspace.createFileSystemWatcher('**/composer.json'),
+                    ...phpWatchers,
+                    vscode.workspace.createFileSystemWatcher(new vscode.RelativePattern(watchBase, '**/mago.toml')),
+                    vscode.workspace.createFileSystemWatcher(new vscode.RelativePattern(watchBase, '**/composer.json')),
                 ],
             },
             outputChannel: this.logger,
@@ -238,26 +295,47 @@ export class LanguageServer {
         return this.client;
     }
 
-    private buildServerArgs(config: vscode.WorkspaceConfiguration): string[] {
-        const args: string[] = ['language-server'];
+    private buildServerArgs(config: vscode.WorkspaceConfiguration, cwd: string): string[] {
+        const globalArgs: string[] = [];
+
+        const configPath = config.get<string>('configPath');
+        if (configPath) {
+            globalArgs.push('--config', path.resolve(cwd, configPath));
+        }
+        const phpVersion = config.get<string>('phpVersion');
+        if (phpVersion) {
+            globalArgs.push('--php-version', phpVersion);
+        }
+        const threads = config.get<number | null>('threads');
+        if (threads != null) {
+            globalArgs.push('--threads', String(threads));
+        }
+        if (config.get<boolean>('allowUnsupportedPhpVersion')) {
+            globalArgs.push('--allow-unsupported-php-version');
+        }
+        if (config.get<boolean>('noVersionCheck')) {
+            globalArgs.push('--no-version-check');
+        }
+
+        const subcommandArgs: string[] = ['language-server'];
 
         if (config.get<boolean>('noAnalyzer')) {
-            args.push('--no-analyzer');
+            subcommandArgs.push('--no-analyzer');
         }
         if (config.get<boolean>('noLinter')) {
-            args.push('--no-linter');
+            subcommandArgs.push('--no-linter');
         }
         if (config.get<boolean>('noFormatter')) {
-            args.push('--no-formatter');
+            subcommandArgs.push('--no-formatter');
         }
 
-        return args;
+        return [...globalArgs, ...subcommandArgs];
     }
 
-    private spawnServer(execPath: string, args: string[]): Promise<ChildProcess> {
+    private spawnServer(execPath: string, args: string[], cwd: string): Promise<ChildProcess> {
         return new Promise<ChildProcess>((resolve, reject) => {
             const proc = spawn(execPath, args, {
-                cwd: this.workspacePath,
+                cwd,
                 env: {
                     ...process.env,
                     // Disable color codes in server output

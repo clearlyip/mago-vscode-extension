@@ -3,17 +3,14 @@
   "description": "Test PHP project for developing the Mago VS Code extension",
   "type": "project",
   "minimum-stability": "dev",
+  "prefer-stable": true,
   "require": {
-    "php": ">=8.1",
-    "clearlyip/mago-lsp": "*"
+    "php": ">=8.1"
   },
   "repositories": [
     {
       "type": "path",
-      "url": "../",
-      "options": {
-        "symlink": false
-      }
+      "url": "../"
     }
   ],
   "extra": {
@@ -23,5 +20,13 @@
     "allow-plugins": {
       "clearlyip/mago-lsp": true
     }
+  },
+  "scripts": {
+    "mago:lsp": "mago-lsp language-server",
+    "mago": "mago"
+  },
+  "require-dev": {
+    "carthage-software/mago": "^1.29.0",
+    "clearlyip/mago-lsp": "dev-master"
   }
 }
