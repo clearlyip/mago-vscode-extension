@@ -7,7 +7,7 @@
 # Mago LSP
 
 [![VS Code Marketplace](https://img.shields.io/badge/VS_Code_Marketplace-Mago_LSP-blue?style=flat-square&logo=visualstudiocode)](https://marketplace.visualstudio.com/items?itemName=Clearlyip.mago-vscode-extension)
-[![VS Code Version](https://img.shields.io/badge/VS_Code-%3E%3D1.85.0-blue?style=flat-square&logo=visualstudiocode)](https://code.visualstudio.com)
+[![VS Code Version](https://img.shields.io/badge/VS_Code-%3E%3D1.95.0-blue?style=flat-square&logo=visualstudiocode)](https://code.visualstudio.com)
 [![TypeScript](https://img.shields.io/badge/TypeScript-blue?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org)
 [![License MIT](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](LICENSE)
 
