@@ -89,7 +89,7 @@ jobs:
 
     steps:
       - name: Checkout mago ${{ env.VERSION }}
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: carthage-software/mago
           ref: ${{ env.VERSION }}
