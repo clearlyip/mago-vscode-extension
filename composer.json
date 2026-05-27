@@ -13,6 +13,9 @@
     "php": ">=8.1",
     "composer-plugin-api": "^2.0"
   },
+  "keywords": [
+    "dev"
+  ],
   "suggest": {
     "ext-zip": "Required on Windows to extract the mago-lsp binary archive",
     "ext-curl": "Enables download progress display when fetching the mago-lsp binary",

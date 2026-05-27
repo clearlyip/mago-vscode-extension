@@ -77,20 +77,40 @@ function isMagoExecutable(execPath: string): boolean {
 }
 
 /**
+ * Returns true when the file at `execPath` is a PHP launcher script
+ * (i.e. starts with "#!/usr/bin/env php"). The Composer-installed
+ * vendor/bin/mago-lsp is such a script: on first invocation it downloads
+ * the real binary before exec-ing into it, which can take well over 5 s.
+ */
+function isPhpLauncherScript(execPath: string): boolean {
+    try {
+        const buf = Buffer.alloc(20);
+        const fd = fs.openSync(execPath, 'r');
+        fs.readSync(fd, buf, 0, 20, 0);
+        fs.closeSync(fd);
+        return buf.toString('utf8').startsWith('#!/usr/bin/env php');
+    } catch {
+        return false;
+    }
+}
+
+/**
  * Returns true when the binary at `execPath` was compiled with the
  * `language-server` feature, i.e. `mago --help` lists `language-server`
  * as an available subcommand.
  *
  * A binary built without `--features language-server` simply omits the
  * subcommand from its help output, so this is the canonical pre-flight check.
- * Times out after 5 s to avoid blocking activation indefinitely.
+ * `timeoutMs` defaults to 5 s for native binaries; callers should pass a
+ * much larger value when the path is a PHP launcher that may need to download
+ * the binary on first run.
  */
-function hasLanguageServerSupport(execPath: string): Promise<boolean> {
+function hasLanguageServerSupport(execPath: string, timeoutMs = 5_000): Promise<boolean> {
     return new Promise((resolve) => {
         execFile(
             execPath,
             ['--help'],
-            { timeout: 5000, env: { ...process.env, NO_COLOR: '1' } },
+            { timeout: timeoutMs, env: { ...process.env, NO_COLOR: '1' } },
             (_err, stdout, stderr) => {
                 // mago prints help to stdout; some versions may use stderr
                 resolve((stdout + stderr).includes('language-server'));
@@ -171,7 +191,15 @@ export class LanguageServer {
             return;
         }
 
-        if (!(await hasLanguageServerSupport(execPath))) {
+        const phpLauncher = isPhpLauncherScript(execPath);
+        if (phpLauncher) {
+            this.logger.logInfo(
+                'Detected PHP launcher script — binary will be downloaded on first run. This may take a moment.',
+            );
+            this.statusBar.update(ServerStatus.Initializing, 'downloading...');
+        }
+
+        if (!(await hasLanguageServerSupport(execPath, phpLauncher ? 300_000 : 5_000))) {
             const msg =
                 `The mago binary at "${execPath}" does not support the language-server subcommand. ` +
                 `It must be compiled with --features language-server.\n\n` +
