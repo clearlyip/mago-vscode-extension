@@ -10,7 +10,7 @@
     "url": "https://github.com/clearlyip/mago-vscode-extension"
   },
   "engines": {
-    "vscode": "^1.85.0"
+    "vscode": "^1.95.0"
   },
   "icon": "icon.png",
   "bugs": {
@@ -184,7 +184,7 @@
     "@vscode/vsce": "^3.9.1",
     "@biomejs/biome": "^2.4.15",
     "@types/node": "^24.12.4",
-    "@types/vscode": "^1.85.0",
+    "@types/vscode": "^1.95.0",
     "esbuild": "^0.28.0",
     "typescript": "^6.0.3"
   }
