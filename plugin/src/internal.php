@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace ClearlyIP\MagoLsp\Internal;
 
-use Composer\InstalledVersions;
 use PharData;
 use RuntimeException;
 use ZipArchive;
@@ -64,37 +63,23 @@ const BIN_NAME = 'mago-lsp';
 const GITHUB_REPO = 'clearlyip/mago-vscode-extension';
 const STATUS_CHECK_INTERVAL = 10_000;
 
+/** The binary version to download. Decoupled from the Composer package version so that
+ *  point releases of the package do not require new binary artifacts on GitHub. */
+const BINARY_VERSION = '1.29.0';
+
 /**
- * Resolves the installed version of this package.
+ * Resolves the binary version to download.
  *
- * For dev-master (path repository installs), falls back to the git tag at HEAD.
- *
- * @throws RuntimeException If the version cannot be determined.
+ * Override at runtime by setting the MAGO_LSP_BINARY_VERSION environment variable.
  */
 function get_version(): string
 {
-    $version = InstalledVersions::getPrettyVersion('clearlyip/mago-lsp');
-
-    if ($version === null) {
-        throw new RuntimeException('Could not determine clearlyip/mago-lsp package version.');
+    $env = getenv('MAGO_LSP_BINARY_VERSION');
+    if (is_string($env) && $env !== '') {
+        return ltrim(trim($env), 'v');
     }
 
-    if ($version === 'dev-master') {
-        $output   = [];
-        $exitCode = 0;
-        @exec('git tag --points-at HEAD', $output, $exitCode);
-
-        if ($exitCode !== 0 || empty($output)) {
-            throw new RuntimeException(
-                'Running dev-master but no git tag found at HEAD. '
-                . 'Tag the commit or install a release version.',
-            );
-        }
-
-        return ltrim(trim($output[0]), 'v');
-    }
-
-    return ltrim($version, 'v');
+    return BINARY_VERSION;
 }
 
 /**
