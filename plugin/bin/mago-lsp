@@ -1,0 +1,49 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+namespace ClearlyIP\MagoLsp\Internal;
+
+use RuntimeException;
+
+(function (): never {
+    if (!class_exists(\Composer\InstalledVersions::class, false)) {
+        // Composer's bin proxy sets _composer_autoload_path before including this file.
+        // Fall back to relative traversal for direct invocation or standalone dev installs.
+        $loaded = false;
+
+        foreach (array_filter([
+            $GLOBALS['_composer_autoload_path'] ?? null,
+            __DIR__ . '/../../../../autoload.php',
+            __DIR__ . '/../../vendor/autoload.php',
+        ]) as $file) {
+            if (file_exists((string) $file)) {
+                require (string) $file;
+                $loaded = true;
+                break;
+            }
+        }
+
+        if (!$loaded) {
+            fwrite(STDERR, "mago-lsp: Composer autoloader not found. Run 'composer install' first.\n");
+            exit(1);
+        }
+    }
+
+    try {
+        $version    = namespace\get_version();
+        $target     = namespace\detect_target();
+        $ext        = PHP_OS_FAMILY === 'Windows' ? '.exe' : '';
+        $archiveExt = namespace\get_archive_extension($target);
+        $executable = namespace\ensure_binary($version, $target, $ext, $archiveExt, __DIR__);
+
+        $args = $_SERVER['argv'];
+        array_shift($args);
+
+        namespace\execute($executable, $args);
+    } catch (RuntimeException $e) {
+        fwrite(STDERR, 'mago-lsp: ' . $e->getMessage() . "\n");
+        exit(1);
+    }
+})();
