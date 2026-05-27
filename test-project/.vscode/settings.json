@@ -1,0 +1,15 @@
+{
+  "mago.logLevel": "debug",
+  "mago.trace.server": "messages",
+  "mago.noAnalyzer": false,
+  "mago.noLinter": false,
+  "mago.noFormatter": false,
+  "mago.hideStatusBarWhenIdle": false,
+  "[php]": {
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "clearlyip.mago-vscode-extension",
+    "editor.codeActionsOnSave": {
+      "source.fixAll": "explicit"
+    }
+  }
+}

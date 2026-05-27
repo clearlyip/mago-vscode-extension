@@ -7,8 +7,8 @@
       "request": "launch",
       "args": [
         "--extensionDevelopmentPath=${workspaceFolder}",
-        "--folder=${workspaceFolder}/test-project",
-        "--disable-extensions"
+        "--disable-extensions",
+        "${workspaceFolder}/test-project"
       ],
       "outFiles": ["${workspaceFolder}/dist/**/*.js"],
       "preLaunchTask": "compile",
