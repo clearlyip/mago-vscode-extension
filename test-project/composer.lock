@@ -72,7 +72,7 @@
             "dist": {
                 "type": "path",
                 "url": "..",
-                "reference": "e7c24296a44f5f4cdae3c5d10a5d98c01a22c599"
+                "reference": "d88e7ec40ee69962cad40d0632915dcd478bb7be"
             },
             "require": {
                 "composer-plugin-api": "^2.0",
