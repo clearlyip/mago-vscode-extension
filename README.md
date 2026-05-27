@@ -4,13 +4,13 @@
 
 <div align="center">
 
-# Mago VS Code Extension
+# Mago LSP
 
 [![VS Code Version](https://img.shields.io/badge/VS_Code-%3E%3D1.85.0-blue?style=flat-square&logo=visualstudiocode)](https://code.visualstudio.com)
 [![TypeScript](https://img.shields.io/badge/TypeScript-blue?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org)
 [![License MIT](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](LICENSE)
 
-PHP linting, formatting, and static analysis powered by the [Mago](https://github.com/carthage-software/mago) language server.
+VS Code extension for PHP linting, formatting, and static analysis powered by the [Mago](https://github.com/carthage-software/mago) language server.
 
 [Prerequisites](#prerequisites) • [Installation](#installation) • [Configuration](#configuration) • [Commands](#commands) • [Troubleshooting](#troubleshooting)
 
@@ -18,7 +18,7 @@ PHP linting, formatting, and static analysis powered by the [Mago](https://githu
 
 ## Overview
 
-This extension integrates [Mago](https://mago.carthage.software) — a high-performance PHP linter, formatter, and static analyzer written in Rust — into Visual Studio Code via the Language Server Protocol. It provides real-time diagnostics, code formatting, hover information, completion, inlay hints, and code lenses for PHP files.
+**Mago LSP** integrates [Mago](https://mago.carthage.software) — a high-performance PHP linter, formatter, and static analyzer written in Rust — into Visual Studio Code via the Language Server Protocol. It provides real-time diagnostics, code formatting, hover information, completion, inlay hints, and code lenses for PHP files.
 
 ## Why This Extension
 
@@ -71,16 +71,22 @@ code --install-extension mago-0.1.0.vsix
 
 All settings are under the `mago` namespace in VS Code settings.
 
-| Setting                      | Default  | Description                                                                                                                                                                                                                          |
-| ---------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `mago.executablePath`        | `"mago"` | Path to the Mago binary. Accepts an absolute path, a workspace-relative path (e.g. `./bin/mago`), or a name on `PATH`. When left at default, the extension first checks for `vendor/bin/mago-lsp` installed by the Composer package. |
-| `mago.configPath`            | `""`     | Path to `mago.toml`. If empty, Mago searches the workspace root.                                                                                                                                                                     |
-| `mago.noAnalyzer`            | `false`  | Disable the static analyzer. Hover types, completion, inlay hints, and code lenses will be degraded or unavailable.                                                                                                                  |
-| `mago.noLinter`              | `false`  | Disable the linter. No lint diagnostics or quick-fix code actions.                                                                                                                                                                   |
-| `mago.noFormatter`           | `false`  | Disable the formatter. Format Document will be unavailable for PHP files.                                                                                                                                                            |
-| `mago.logLevel`              | `"info"` | Output channel verbosity: `error`, `warn`, `info`, `debug`, or `trace`.                                                                                                                                                              |
-| `mago.maxRestartCount`       | `5`      | Maximum automatic restarts after a server crash before giving up.                                                                                                                                                                    |
-| `mago.hideStatusBarWhenIdle` | `false`  | Hide the status bar item when the server is idle.                                                                                                                                                                                    |
+| Setting                            | Default   | Scope    | Description                                                                                                                                                                                              |
+| ---------------------------------- | --------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `mago.executablePath`              | `"mago"`  | machine  | Path to the Mago binary. Accepts an absolute path, a workspace-relative path (e.g. `./bin/mago`), or a name on `PATH`. When left at default, the extension first checks for `vendor/bin/mago-lsp` (Composer), then falls back to `mago` on `PATH`. |
+| `mago.configPath`                  | `""`      | resource | Path to `mago.toml`. If empty, Mago searches the workspace root.                                                                                                                                        |
+| `mago.workspace`                   | `""`      | resource | Path to the workspace directory passed to the language server. Overrides the VS Code workspace root.                                                                                                     |
+| `mago.phpVersion`                  | `""`      | resource | PHP version for parsing and analysis, e.g. `"8.3"`. Uses Mago's default when empty.                                                                                                                    |
+| `mago.threads`                     | _(unset)_ | window   | Number of threads for linting, formatting, and analysis. Uses Mago's default when unset.                                                                                                                 |
+| `mago.allowUnsupportedPhpVersion`  | `false`   | resource | Allow using an unsupported PHP version without an error.                                                                                                                                                 |
+| `mago.noVersionCheck`              | `false`   | window   | Silence the project version drift warning.                                                                                                                                                               |
+| `mago.noAnalyzer`                  | `false`   | resource | Disable the static analyzer. Hover types, completion, inlay hints, and code lenses will be degraded or unavailable.                                                                                     |
+| `mago.noLinter`                    | `false`   | resource | Disable the linter. No lint diagnostics or quick-fix code actions.                                                                                                                                      |
+| `mago.noFormatter`                 | `false`   | resource | Disable the formatter. Format Document will be unavailable for PHP files.                                                                                                                                |
+| `mago.logLevel`                    | `"info"`  | window   | Output channel verbosity: `error`, `warn`, `info`, `debug`, or `trace`.                                                                                                                                 |
+| `mago.maxRestartCount`             | `5`       | window   | Maximum automatic restarts after a server crash before giving up.                                                                                                                                        |
+| `mago.hideStatusBarWhenIdle`       | `false`   | window   | Hide the status bar item when the server is idle.                                                                                                                                                        |
+| `mago.trace.server`                | `"off"`   | window   | Trace LSP communication between VS Code and the server: `off`, `messages`, or `verbose`.                                                                                                                 |
 
 ## Commands
 

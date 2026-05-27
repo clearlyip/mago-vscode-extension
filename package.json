@@ -1,6 +1,6 @@
 {
   "name": "mago-vscode-extension",
-  "displayName": "Mago",
+  "displayName": "Mago LSP",
   "description": "PHP linting, formatting, and analysis via the Mago language server",
   "version": "0.9.0",
   "publisher": "clearlyip",
