@@ -176,6 +176,44 @@ export class LanguageServer {
 
     async start(): Promise<void> {
         const config = vscode.workspace.getConfiguration('mago');
+
+        const configuredWorkspace = config.get<string>('workspace');
+        const cwd = configuredWorkspace ? path.resolve(this.workspacePath, configuredWorkspace) : this.workspacePath;
+
+        if (configuredWorkspace && !fs.existsSync(cwd)) {
+            const msg = `mago.workspace path does not exist: ${cwd}`;
+            this.logger.logError(msg);
+            this.statusBar.update(ServerStatus.Error, 'invalid workspace');
+            vscode.window.showErrorMessage(`Mago: ${msg}`, 'Open Settings').then((action) => {
+                if (action === 'Open Settings') {
+                    vscode.commands.executeCommand('workbench.action.openSettings', 'mago.workspace');
+                }
+            });
+            return;
+        }
+
+        const explicitConfigPath = config.get<string>('configPath');
+        const resolvedConfigPath = explicitConfigPath
+            ? path.resolve(cwd, explicitConfigPath)
+            : path.join(cwd, 'mago.toml');
+
+        if (!fs.existsSync(resolvedConfigPath)) {
+            if (explicitConfigPath) {
+                const msg = `mago.configPath file does not exist: ${resolvedConfigPath}`;
+                this.logger.logError(msg);
+                this.statusBar.update(ServerStatus.Error, 'config not found');
+                vscode.window.showErrorMessage(`Mago: ${msg}`, 'Open Settings').then((action) => {
+                    if (action === 'Open Settings') {
+                        vscode.commands.executeCommand('workbench.action.openSettings', 'mago.configPath');
+                    }
+                });
+            } else {
+                this.logger.logInfo(`No mago.toml found in ${cwd}, language server will not start.`);
+                this.statusBar.update(ServerStatus.Stopped, 'no mago.toml');
+            }
+            return;
+        }
+
         const rawExec = config.get<string>('executablePath') || 'mago';
         const execPath = resolveMagoPath(rawExec, this.workspacePath);
 
@@ -223,8 +261,6 @@ export class LanguageServer {
             return;
         }
 
-        const configuredWorkspace = config.get<string>('workspace');
-        const cwd = configuredWorkspace ? path.resolve(this.workspacePath, configuredWorkspace) : this.workspacePath;
         const args = this.buildServerArgs(config, cwd);
         this.logger.logInfo(`Starting mago language server: ${execPath} ${args.join(' ')}`);
         this.logger.logInfo(`Server working directory: ${cwd}`);
@@ -240,10 +276,6 @@ export class LanguageServer {
 
         const watchBase = clientWorkspaceFolder?.uri ?? vscode.Uri.file(this.workspacePath);
 
-        const explicitConfigPath = config.get<string>('configPath');
-        const resolvedConfigPath = explicitConfigPath
-            ? path.resolve(cwd, explicitConfigPath)
-            : path.join(cwd, 'mago.toml');
         const { paths: sourcePaths, excludes: sourceExcludes } = await readMagoSourceConfig(resolvedConfigPath);
 
         // Filter paths that are wholly covered by an exclude entry, then build one watcher per path.

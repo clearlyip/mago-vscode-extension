@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.2] - 2026-05-27
+
+### Added
+
+- The language server no longer starts in workspaces that have no `mago.toml` — this prevents a spurious "executable not found" popup when opening PHP files in projects that don't use Mago.
+- If `mago.configPath` is set but the file does not exist, the server aborts with an error message and an "Open Settings" shortcut rather than silently failing.
+- If `mago.workspace` is set but the path does not exist, the server aborts with an error message and an "Open Settings" shortcut.
+
 ## [0.9.1] - 2026-05-27
 
 ### Fixed
@@ -30,7 +38,7 @@ Initial release.
 - Automatic server restart when the active editor switches to a different workspace folder.
 - PHP file watchers scoped to the `[source] paths` declared in `mago.toml`; falls back to watching all PHP files when no paths are configured.
 - Conflict detection — warns when another Mago extension (`Michael4d45.mago-vscode`, `kgz.mago-unofficial`) is active and would produce duplicate diagnostics.
-- GitHub Actions workflow that builds LSP-enabled Mago binaries for Linux (x86\_64, aarch64, armv7 musl), macOS (x86\_64, aarch64), Windows (x86\_64), and FreeBSD (x86\_64) on every upstream Mago release.
+- GitHub Actions workflow that builds LSP-enabled Mago binaries for Linux (x86_64, aarch64, armv7 musl), macOS (x86_64, aarch64), Windows (x86_64), and FreeBSD (x86_64) on every upstream Mago release.
 - Dependabot configuration for weekly npm and monthly GitHub Actions updates.
 
 ### Fixed
