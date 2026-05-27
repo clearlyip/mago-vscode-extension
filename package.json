@@ -183,7 +183,7 @@
   "devDependencies": {
     "@vscode/vsce": "^3.9.1",
     "@biomejs/biome": "^2.4.15",
-    "@types/node": "^24.12.4",
+    "@types/node": "^25.9.1",
     "@types/vscode": "^1.95.0",
     "esbuild": "^0.28.0",
     "typescript": "^6.0.3"
