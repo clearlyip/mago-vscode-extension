@@ -3,13 +3,13 @@ name: Build Mago with Language Server
 on:
   schedule:
     # Check for a new upstream release every day at 06:00 UTC
-    - cron: '0 6 * * *'
+    - cron: "0 6 * * *"
   workflow_dispatch:
     inputs:
       version:
-        description: 'Mago version tag to build (e.g. 1.29.0). Leave empty to use latest.'
+        description: "Mago version tag to build (e.g. 1.29.0). Leave empty to use latest."
         required: false
-        default: ''
+        default: ""
 
 jobs:
   # ─── Phase 1: decide whether anything needs building ─────────────────────────
@@ -68,28 +68,72 @@ jobs:
         job:
           # Tier 1 — native runners, no cross-compilation needed
           - { target: x86_64-pc-windows-msvc, os: windows-latest }
-          - { target: aarch64-apple-darwin,   os: macos-latest   }
-          - { target: x86_64-apple-darwin,    os: macos-latest   }
+          - { target: aarch64-apple-darwin, os: macos-latest }
+          - { target: x86_64-apple-darwin, os: macos-latest }
 
           # Linux — cross-compiled via cross-rs (pure-Rust feature, no extra syslibs needed)
-          - { target: x86_64-unknown-linux-gnu,       os: ubuntu-latest, use_cross: true }
-          - { target: x86_64-unknown-linux-musl,      os: ubuntu-latest, use_cross: true }
-          - { target: aarch64-unknown-linux-gnu,      os: ubuntu-latest, use_cross: true }
-          - { target: aarch64-unknown-linux-musl,     os: ubuntu-latest, use_cross: true }
-          - { target: arm-unknown-linux-gnueabi,      os: ubuntu-latest, use_cross: true }
-          - { target: arm-unknown-linux-gnueabihf,    os: ubuntu-latest, use_cross: true }
-          - { target: arm-unknown-linux-musleabi,     os: ubuntu-latest, use_cross: true }
-          - { target: arm-unknown-linux-musleabihf,   os: ubuntu-latest, use_cross: true }
-          - { target: armv7-unknown-linux-gnueabihf,  os: ubuntu-latest, use_cross: true }
-          - { target: armv7-unknown-linux-musleabihf, os: ubuntu-latest, use_cross: true }
+          - {
+              target: x86_64-unknown-linux-gnu,
+              os: ubuntu-latest,
+              use_cross: true,
+            }
+          - {
+              target: x86_64-unknown-linux-musl,
+              os: ubuntu-latest,
+              use_cross: true,
+            }
+          - {
+              target: aarch64-unknown-linux-gnu,
+              os: ubuntu-latest,
+              use_cross: true,
+            }
+          - {
+              target: aarch64-unknown-linux-musl,
+              os: ubuntu-latest,
+              use_cross: true,
+            }
+          - {
+              target: arm-unknown-linux-gnueabi,
+              os: ubuntu-latest,
+              use_cross: true,
+            }
+          - {
+              target: arm-unknown-linux-gnueabihf,
+              os: ubuntu-latest,
+              use_cross: true,
+            }
+          - {
+              target: arm-unknown-linux-musleabi,
+              os: ubuntu-latest,
+              use_cross: true,
+            }
+          - {
+              target: arm-unknown-linux-musleabihf,
+              os: ubuntu-latest,
+              use_cross: true,
+            }
+          - {
+              target: armv7-unknown-linux-gnueabihf,
+              os: ubuntu-latest,
+              use_cross: true,
+            }
+          - {
+              target: armv7-unknown-linux-musleabihf,
+              os: ubuntu-latest,
+              use_cross: true,
+            }
 
           # Tier 2
-          - { target: x86_64-pc-windows-gnu,  os: windows-latest }
-          - { target: x86_64-unknown-freebsd, os: ubuntu-latest, use_cross: true }
+          - { target: x86_64-pc-windows-gnu, os: windows-latest }
+          - {
+              target: x86_64-unknown-freebsd,
+              os: ubuntu-latest,
+              use_cross: true,
+            }
 
     steps:
       - name: Checkout mago ${{ env.VERSION }}
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: carthage-software/mago
           ref: ${{ env.VERSION }}
@@ -155,7 +199,7 @@ jobs:
           echo "PKG_PATH=staging/${PKG_NAME}" >> "$GITHUB_OUTPUT"
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ steps.package.outputs.PKG_NAME }}
           path: ${{ steps.package.outputs.PKG_PATH }}
@@ -171,13 +215,13 @@ jobs:
 
     steps:
       - name: Download all build artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           path: artifacts/
           merge-multiple: true
 
       - name: Create release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ needs.check.outputs.version }}
           name: "mago ${{ needs.check.outputs.version }} (language-server)"
