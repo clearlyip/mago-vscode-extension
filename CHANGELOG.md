@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.4] - 2026-05-28
+
+### Fixed
+
+- "Mago extension activated" is no longer logged when the language server did not start (e.g. missing `mago.toml`, executable not found, or binary lacking language-server support).
+- The config file watcher now respects `mago.configPath`: when the setting is configured, only that specific file is watched for changes that trigger a server restart, rather than any `mago.toml` anywhere in the workspace.
+
 ## [0.9.3] - 2026-05-28
 
 ### Changed

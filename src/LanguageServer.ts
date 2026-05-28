@@ -174,7 +174,7 @@ export class LanguageServer {
         return this.starting;
     }
 
-    async start(): Promise<void> {
+    async start(): Promise<boolean> {
         const config = vscode.workspace.getConfiguration('mago');
 
         const configuredWorkspace = config.get<string>('workspace');
@@ -189,7 +189,7 @@ export class LanguageServer {
                     vscode.commands.executeCommand('workbench.action.openSettings', 'mago.workspace');
                 }
             });
-            return;
+            return false;
         }
 
         const rawExec = config.get<string>('executablePath') || 'mago';
@@ -216,7 +216,7 @@ export class LanguageServer {
                     this.statusBar.update(ServerStatus.Stopped, 'no mago.toml');
                 }
             }
-            return;
+            return false;
         }
         const execPath = resolveMagoPath(rawExec, this.workspacePath);
 
@@ -241,7 +241,7 @@ export class LanguageServer {
                         }
                     });
             }
-            return;
+            return false;
         }
 
         const phpLauncher = isPhpLauncherScript(execPath);
@@ -273,7 +273,7 @@ export class LanguageServer {
                         vscode.commands.executeCommand('workbench.action.openSettings', 'mago.executablePath');
                     }
                 });
-            return;
+            return false;
         }
 
         const args = this.buildServerArgs(config, cwd);
@@ -344,10 +344,12 @@ export class LanguageServer {
             this.starting = false;
             this.statusBar.update(ServerStatus.Running, 'ready');
             this.logger.logInfo('Mago language server is ready');
+            return true;
         } catch (err) {
             this.starting = false;
             this.statusBar.update(ServerStatus.Error, 'failed to start');
             this.logger.logError(`Failed to start language server: ${err}`);
+            return false;
         }
     }
 
@@ -360,10 +362,10 @@ export class LanguageServer {
         }
     }
 
-    async restart(): Promise<void> {
+    async restart(): Promise<boolean> {
         this.logger.logInfo('Restarting Mago language server');
         await this.stop();
-        await this.start();
+        return this.start();
     }
 
     getClient(): LanguageClient | null {

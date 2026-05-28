@@ -1,3 +1,4 @@
+import * as path from 'node:path';
 import * as vscode from 'vscode';
 import { registerCommands } from './commands';
 import { LanguageServer } from './LanguageServer';
@@ -94,25 +95,38 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         }),
     );
 
-    // Watch mago.toml and restart on change
-    const tomlWatcher = vscode.workspace.createFileSystemWatcher('**/mago.toml');
+    // Watch the active config file and restart on change.
+    // Respects mago.configPath: if set, watches that specific file; otherwise watches any mago.toml.
+    const explicitConfigPath = config.get<string>('configPath');
+    const tomlPattern: vscode.GlobPattern = explicitConfigPath
+        ? path.isAbsolute(explicitConfigPath)
+            ? new vscode.RelativePattern(
+                  vscode.Uri.file(path.dirname(explicitConfigPath)),
+                  path.basename(explicitConfigPath),
+              )
+            : new vscode.RelativePattern(workspaceFolders[0].uri, explicitConfigPath)
+        : '**/mago.toml';
+    const configLabel = explicitConfigPath ?? 'mago.toml';
+    const tomlWatcher = vscode.workspace.createFileSystemWatcher(tomlPattern);
     context.subscriptions.push(tomlWatcher);
     tomlWatcher.onDidChange(async () => {
-        logger.logInfo('mago.toml changed, restarting server');
+        logger.logInfo(`${configLabel} changed, restarting server`);
         await server.restart();
     });
     tomlWatcher.onDidCreate(async () => {
-        logger.logInfo('mago.toml created, restarting server');
+        logger.logInfo(`${configLabel} created, restarting server`);
         await server.restart();
     });
     tomlWatcher.onDidDelete(async () => {
-        logger.logInfo('mago.toml deleted, restarting server');
+        logger.logInfo(`${configLabel} deleted, restarting server`);
         await server.restart();
     });
 
-    await server.start();
+    const started = await server.start();
 
-    logger.logInfo('Mago extension activated');
+    if (started) {
+        logger.logInfo('Mago extension activated');
+    }
 }
 
 export async function deactivate(): Promise<void> {
