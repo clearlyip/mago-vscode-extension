@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- `mago.executablePath` default changed from `"mago"` to `""` (empty). When unset the extension still auto-detects `vendor/bin/mago-lsp` and falls back to `mago` on PATH, but the empty default makes it clearer that the user has not explicitly configured a path.
+- When the default executable is not found, the failure is now logged at info level with no popup or error status — mago simply may not be installed in that project. A popup with "Open Settings" is still shown when an explicit `mago.executablePath` is set but does not resolve.
+- `mago.threads` type widened to `["number", "null"]` so VS Code no longer shows a "value must be a number" validation error when the field is left empty.
+- When `mago.executablePath` is not set and no `mago.toml` is found, the status bar is left untouched. The "no mago.toml" status is only shown when the user has explicitly configured an executable path, indicating deliberate Mago usage in that workspace.
+
 ## [0.9.2] - 2026-05-27
 
 ### Added

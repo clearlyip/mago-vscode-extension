@@ -43,14 +43,14 @@
       "properties": {
         "mago.executablePath": {
           "type": "string",
-          "default": "mago",
-          "description": "Path to the mago binary built with language-server support. When set to the default ('mago'), the extension first looks for vendor/bin/mago-lsp installed by the clearlyip/mago-lsp Composer package, then falls back to 'mago' on PATH.",
+          "default": "",
+          "description": "Path to the mago binary built with language-server support. When empty, the extension first looks for vendor/bin/mago-lsp installed by the clearlyip/mago-lsp Composer package, then falls back to 'mago' on PATH.",
           "scope": "machine-overridable"
         },
         "mago.configPath": {
           "type": "string",
           "default": "",
-          "description": "Path to mago.toml configuration file (--config). If empty, mago will look for mago.toml in the workspace root.",
+          "description": "Path to mago.toml configuration file (--config). If empty, mago will look for mago.toml in the workspace root.\nThis is the path to your `mago.toml` configuration file. If not specified, Mago will search for a `mago.toml` file in the workspace directory. If no configuration file is found, Mago will use default settings.",
           "scope": "resource"
         },
         "mago.workspace": {
@@ -62,26 +62,26 @@
         "mago.phpVersion": {
           "type": "string",
           "default": "",
-          "description": "PHP version to use for parsing and analysis, e.g. '8.3' (--php-version).",
+          "description": "PHP version to use for parsing and analysis, e.g. '8.3' (--php-version).\nThis should be a valid PHP version number (e.g., 8.0, 8.1). This value overrides the `php-version` setting in the configuration file and the `MAGO_PHP_VERSION` environment variable.",
           "scope": "resource"
         },
         "mago.threads": {
-          "type": "number",
+          "type": ["number", "null"],
           "default": null,
           "minimum": 1,
-          "description": "Number of threads to use for linting, formatting, and analysis (--threads). Leave empty to use the mago default.",
+          "description": "Number of threads to use for linting, formatting, and analysis (--threads).\nIf not specified, Mago will use all available logical CPUs. This value overrides the `threads` setting in the configuration file and the `MAGO_THREADS` environment variable.",
           "scope": "window"
         },
         "mago.allowUnsupportedPhpVersion": {
           "type": "boolean",
           "default": false,
-          "description": "Allow using an unsupported PHP version (--allow-unsupported-php-version).",
+          "description": "Allow using an unsupported PHP version (--allow-unsupported-php-version).\nUse this flag to bypass the check for supported PHP versions. This is not recommended, as it may lead to unexpected behavior.",
           "scope": "resource"
         },
         "mago.noVersionCheck": {
           "type": "boolean",
           "default": false,
-          "description": "Silence the project version drift warning (--no-version-check).",
+          "description": "Silence the project version drift warning (--no-version-check).\n Suppresses the warning emitted when the installed mago binary differs from the `version` pinned in `mago.toml`, as long as the drift is within the same major version. A major-version mismatch is *always* fatal and is not affected by this flag; the whole point of a major pin is to stop runs across incompatible config schemas.\nCan also be set via the `MAGO_NO_VERSION_CHECK` environment variable or `no-version-check = true` in `mago.toml`.",
           "scope": "window"
         },
         "mago.noAnalyzer": {

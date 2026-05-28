@@ -192,6 +192,9 @@ export class LanguageServer {
             return;
         }
 
+        const rawExec = config.get<string>('executablePath') || 'mago';
+        const executableExplicitlySet = !!config.get<string>('executablePath');
+
         const explicitConfigPath = config.get<string>('configPath');
         const resolvedConfigPath = explicitConfigPath
             ? path.resolve(cwd, explicitConfigPath)
@@ -209,23 +212,33 @@ export class LanguageServer {
                 });
             } else {
                 this.logger.logInfo(`No mago.toml found in ${cwd}, language server will not start.`);
-                this.statusBar.update(ServerStatus.Stopped, 'no mago.toml');
+                if (executableExplicitlySet) {
+                    this.statusBar.update(ServerStatus.Stopped, 'no mago.toml');
+                }
             }
             return;
         }
-
-        const rawExec = config.get<string>('executablePath') || 'mago';
         const execPath = resolveMagoPath(rawExec, this.workspacePath);
 
         if (!isMagoExecutable(execPath)) {
-            const msg = `Mago executable not found or not executable at: ${execPath}\nSet mago.executablePath to the correct path.`;
-            this.logger.logError(msg);
-            this.statusBar.update(ServerStatus.Error, 'not found');
-            vscode.window.showErrorMessage(`Mago: ${msg}`, 'Open Settings').then((action) => {
-                if (action === 'Open Settings') {
-                    vscode.commands.executeCommand('workbench.action.openSettings', 'mago.executablePath');
-                }
-            });
+            const isDefault = rawExec === 'mago';
+            if (isDefault) {
+                this.logger.logInfo(`Mago executable not found at: ${execPath}, language server will not start.`);
+                this.statusBar.update(ServerStatus.Stopped, 'not found');
+            } else {
+                this.logger.logError(
+                    `Mago executable not found or not executable at: ${execPath}\nSet mago.executablePath to the correct path.`,
+                );
+                this.statusBar.update(ServerStatus.Error, 'not found');
+                vscode.window.showErrorMessage(
+                    `Mago: executable not found at "${execPath}". Check mago.executablePath.`,
+                    'Open Settings',
+                ).then((action) => {
+                    if (action === 'Open Settings') {
+                        vscode.commands.executeCommand('workbench.action.openSettings', 'mago.executablePath');
+                    }
+                });
+            }
             return;
         }
 
