@@ -230,14 +230,16 @@ export class LanguageServer {
                     `Mago executable not found or not executable at: ${execPath}\nSet mago.executablePath to the correct path.`,
                 );
                 this.statusBar.update(ServerStatus.Error, 'not found');
-                vscode.window.showErrorMessage(
-                    `Mago: executable not found at "${execPath}". Check mago.executablePath.`,
-                    'Open Settings',
-                ).then((action) => {
-                    if (action === 'Open Settings') {
-                        vscode.commands.executeCommand('workbench.action.openSettings', 'mago.executablePath');
-                    }
-                });
+                vscode.window
+                    .showErrorMessage(
+                        `Mago: executable not found at "${execPath}". Check mago.executablePath.`,
+                        'Open Settings',
+                    )
+                    .then((action) => {
+                        if (action === 'Open Settings') {
+                            vscode.commands.executeCommand('workbench.action.openSettings', 'mago.executablePath');
+                        }
+                    });
             }
             return;
         }

@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.3] - 2026-05-28
+
 ### Changed
 
 - `mago.executablePath` default changed from `"mago"` to `""` (empty). When unset the extension still auto-detects `vendor/bin/mago-lsp` and falls back to `mago` on PATH, but the empty default makes it clearer that the user has not explicitly configured a path.
