@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.5] - 2026-05-29
+
+### Added
+
+- `mago.hideStatusBarWhenRunning` — hide the status bar item when the server is running normally, for a less cluttered status bar.
+- `mago.disableFileFilter` — opt-in setting to disable client-side filtering of PHP file notifications. When enabled, all PHP files are forwarded to the language server regardless of `source.paths` / `source.excludes` in `mago.toml`, restoring Mago's default behaviour.
+
+### Fixed
+
+- Status bar is now hidden (instead of showing "Mago: starting") in workspaces that have no `mago.toml` and no explicit `mago.configPath`. The status bar only appears when the server actually starts or encounters an error.
+
 ## [0.9.4] - 2026-05-28
 
 ### Fixed

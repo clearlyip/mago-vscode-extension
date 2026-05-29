@@ -24,14 +24,19 @@ export class StatusBar {
     constructor() {
         this.item = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
         this.item.command = 'mago.showOutputChannel';
-        this.update(ServerStatus.Initializing, 'starting');
     }
 
     update(status: ServerStatus, detail?: string): void {
         const icon = STATUS_ICONS[status];
         this.item.text = detail ? `${icon} Mago: ${detail}` : `${icon} Mago`;
         this.item.tooltip = `Mago PHP — ${status}`;
-        this.item.show();
+
+        const config = vscode.workspace.getConfiguration('mago');
+        if (status === ServerStatus.Running && config.get<boolean>('hideStatusBarWhenRunning')) {
+            this.item.hide();
+        } else {
+            this.item.show();
+        }
     }
 
     hide(): void {

@@ -2,7 +2,7 @@
   "name": "mago-vscode-extension",
   "displayName": "Mago LSP",
   "description": "PHP linting, formatting, and analysis via the Mago language server",
-  "version": "0.9.4",
+  "version": "0.9.5",
   "publisher": "clearlyip",
   "license": "MIT",
   "repository": {
@@ -122,10 +122,16 @@
           "description": "Maximum number of times the language server will be automatically restarted on failure.",
           "scope": "window"
         },
-        "mago.hideStatusBarWhenIdle": {
+        "mago.hideStatusBarWhenRunning": {
           "type": "boolean",
           "default": false,
-          "description": "Hide the Mago status bar item when the server is idle.",
+          "description": "Hide the Mago status bar item when the server is running. Useful for reducing status bar clutter when Mago is working normally.",
+          "scope": "window"
+        },
+        "mago.disableFileFilter": {
+          "type": "boolean",
+          "default": false,
+          "description": "Disable client-side file filtering based on mago.toml source.paths and source.excludes. When enabled, all PHP file notifications are forwarded to the language server, matching Mago's default behaviour.",
           "scope": "window"
         },
         "mago.trace.server": {

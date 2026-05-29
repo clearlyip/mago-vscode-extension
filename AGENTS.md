@@ -169,7 +169,8 @@ The extension exposes these settings (defined in `package.json.contributes.confi
 | `mago.noFormatter` | boolean | `false` | resource |
 | `mago.logLevel` | string | `"info"` | window |
 | `mago.maxRestartCount` | number | `5` | window |
-| `mago.hideStatusBarWhenIdle` | boolean | `false` | window |
+| `mago.hideStatusBarWhenRunning` | boolean | `false` | window |
+| `mago.disableFileFilter` | boolean | `false` | window |
 | `mago.trace.server` | string | `"off"` | window |
 
 ## Additional Notes

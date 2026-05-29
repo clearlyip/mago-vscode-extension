@@ -193,7 +193,6 @@ export class LanguageServer {
         }
 
         const rawExec = config.get<string>('executablePath') || 'mago';
-        const executableExplicitlySet = !!config.get<string>('executablePath');
 
         const explicitConfigPath = config.get<string>('configPath');
         const resolvedConfigPath = explicitConfigPath
@@ -212,9 +211,7 @@ export class LanguageServer {
                 });
             } else {
                 this.logger.logInfo(`No mago.toml found in ${cwd}, language server will not start.`);
-                if (executableExplicitlySet) {
-                    this.statusBar.update(ServerStatus.Stopped, 'no mago.toml');
-                }
+                this.statusBar.hide();
             }
             return false;
         }
@@ -292,36 +289,45 @@ export class LanguageServer {
         const watchBase = clientWorkspaceFolder?.uri ?? vscode.Uri.file(this.workspacePath);
 
         const { paths: sourcePaths, excludes: sourceExcludes } = await readMagoSourceConfig(resolvedConfigPath);
+        // Paths wholly covered by an exclude are dead — skip them so the filter isn't overly permissive.
+        const activePaths = sourcePaths.filter((p) => !sourceExcludes.some((ex) => p === ex || p.startsWith(`${ex}/`)));
 
-        // Filter paths that are wholly covered by an exclude entry, then build one watcher per path.
-        // VS Code watchers have no negation support, so partial sub-path exclusions are handled server-side by Mago.
-        const activePaths =
-            sourcePaths.length > 0
-                ? sourcePaths.filter((p) => !sourceExcludes.some((ex) => p === ex || p.startsWith(ex)))
-                : [];
-        const phpWatchers =
-            activePaths.length > 0
-                ? activePaths.map((p) =>
-                      vscode.workspace.createFileSystemWatcher(
-                          new vscode.RelativePattern(watchBase, `${p.replace(/\/$/, '')}/**/*.php`),
-                      ),
-                  )
-                : [vscode.workspace.createFileSystemWatcher(new vscode.RelativePattern(watchBase, '**/*.php'))];
-
-        this.logger.logInfo(
-            activePaths.length > 0
-                ? `Watching PHP files in: ${activePaths.join(', ')}`
-                : 'Watching all PHP files in workspace',
-        );
+        const isPathAllowed = (fsPath: string): boolean => {
+            if (config.get<boolean>('disableFileFilter')) {
+                return true;
+            }
+            if (
+                sourceExcludes.some((ex) => {
+                    const abs = path.join(cwd, ex);
+                    this.logger.logDebug(`Checking active path: ${abs} against ${fsPath}`);
+                    return fsPath === abs || fsPath.startsWith(abs);
+                })
+            ) {
+                this.logger.logDebug(`Excluding ${fsPath} due to mago.toml source.excludes`);
+                return false;
+            }
+            if (
+                activePaths.length > 0 &&
+                !activePaths.some((p) => {
+                    const abs = path.join(cwd, p);
+                    this.logger.logDebug(`Checking active path: ${abs} against ${fsPath}`);
+                    return fsPath === abs || fsPath.startsWith(abs);
+                })
+            ) {
+                this.logger.logDebug(`Excluding ${fsPath} due to mago.toml source.includes`);
+                return false;
+            }
+            this.logger.logDebug(`Allowing ${fsPath}`);
+            return true;
+        };
 
         const clientOptions: LanguageClientOptions = {
             documentSelector: [{ scheme: 'file', language: 'php' }],
             workspaceFolder: clientWorkspaceFolder,
             synchronize: {
                 fileEvents: [
-                    ...phpWatchers,
                     vscode.workspace.createFileSystemWatcher(new vscode.RelativePattern(watchBase, '**/mago.toml')),
-                    vscode.workspace.createFileSystemWatcher(new vscode.RelativePattern(watchBase, '**/composer.json')),
+                    vscode.workspace.createFileSystemWatcher(new vscode.RelativePattern(watchBase, '**/composer.lock')),
                 ],
             },
             outputChannel: this.logger,
@@ -331,6 +337,36 @@ export class LanguageServer {
             errorHandler,
             initializationOptions: {
                 configPath: config.get<string>('configPath') || undefined,
+            },
+            middleware: {
+                didOpen: async (document, next) => {
+                    if (isPathAllowed(document.uri.fsPath)) {
+                        await next(document);
+                    }
+                },
+                didChange: async (event, next) => {
+                    if (isPathAllowed(event.document.uri.fsPath)) {
+                        await next(event);
+                    }
+                },
+                didSave: async (document, next) => {
+                    if (isPathAllowed(document.uri.fsPath)) {
+                        await next(document);
+                    }
+                },
+                didClose: async (document, next) => {
+                    if (isPathAllowed(document.uri.fsPath)) {
+                        await next(document);
+                    }
+                },
+                workspace: {
+                    didChangeWatchedFile: async (event, next) => {
+                        // Only filter PHP notifications; let mago.toml / composer.json through unconditionally.
+                        if (!event.uri.endsWith('.php') || isPathAllowed(vscode.Uri.parse(event.uri).fsPath)) {
+                            await next(event);
+                        }
+                    },
+                },
             },
         };
 
