@@ -241,11 +241,9 @@ jobs:
           # Mark pre-release: the LSP feature has no stability guarantees before mago 2.0
           prerelease: true
           body: |
-            Mago `${{ needs.check.outputs.version }}` compiled with `--features language-server`.
+            Mago `${{ needs.check.outputs.version }}` merged with https://github.com/carthage-software/mago/pull/1926.
 
-            > **Stability notice:** The Mago language server is an unstable, feature-gated preview. Its
-            > advertised capabilities, wire protocol, and CLI flags may change or be removed without
-            > notice before Mago 2.0. There are no compatibility guarantees until that release.
+            > **Stability notice:** The Mago language server is a work in progress. The set of advertised capabilities, the wire behavior, the flags, and even the existence of this subcommand can change or disappear without notice. There are no compatibility guarantees until mago 2.0. If you need a stable editor integration, wait for that release.
 
             ## Installation
 
