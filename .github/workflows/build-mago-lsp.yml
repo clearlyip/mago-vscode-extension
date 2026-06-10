@@ -132,12 +132,25 @@ jobs:
             }
 
     steps:
+      - name: Checkout this repo (for patches)
+        uses: actions/checkout@v6
+        with:
+          path: _this_repo
+
       - name: Checkout mago ${{ env.VERSION }} with language-server feature
         run: |
           git clone https://github.com/carthage-software/mago.git .
           git checkout ${{ env.VERSION }}
           git fetch origin feat/language-server
           git merge --no-edit origin/feat/language-server
+
+      - name: Apply local patches
+        run: |
+          for p in _this_repo/patches/*.patch; do
+            echo "Applying $p"
+            git apply "$p"
+          done
+          rm -rf _this_repo
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
