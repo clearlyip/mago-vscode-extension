@@ -111,10 +111,10 @@ If another Mago-related extension is active (e.g. `Michael4d45.mago-vscode` or `
 Ensure `mago` is on your `PATH`, or set `mago.executablePath` to the full path of the binary. Verify it was built with LSP support:
 
 ```sh
-mago language-server --help
+mago-lsp language-server --help
 ```
 
-If the subcommand is missing, reinstall with `cargo install mago --features language-server` or `composer require clearlyip/mago-lsp`.
+If the subcommand is missing, reinstall with `composer require clearlyip/mago-lsp`.
 
 **Server crashes immediately or produces no diagnostics**
 Open the output channel (**Mago: Show Output Channel**) and set `mago.logLevel` to `debug` or `trace`. Validate your config with `mago config` in the workspace root.
