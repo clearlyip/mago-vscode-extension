@@ -37,10 +37,10 @@ Many other extensions work by invoking the Mago CLI for each lint, analyze, or f
 
 ## Prerequisites
 
-The language server is an **unstable preview** in Mago and is **not included in default builds**. It must be explicitly enabled with the `language-server` Cargo feature.
+The language server is an **unstable preview** in Mago and is **not included in default builds**.
 
 > [!WARNING]
-> The LSP implementation, advertised capabilities, CLI flags, and wire protocol may change without notice before Mago 2.0. There are no compatibility guarantees until that release.
+> The Mago language server is a work in progress. The set of advertised capabilities, the wire behaviour, the flags, and even the existence of this subcommand can change or disappear without notice. There are no compatibility guarantees until mago 2.0. If you need a stable editor integration, wait for that release.
 
 ### Option A — Composer package (recommended)
 

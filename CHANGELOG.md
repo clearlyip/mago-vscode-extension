@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.10.0] - 2026-06-10
 
+### Added
+
+- Startup warning popup informing users that the Mago language server is experimental with no stability guarantees until mago 2.0.
+- `mago.suppressExperimentalWarning` (application-scoped) setting to suppress this popup. A "Don't show again" button in the popup writes this setting automatically.
+
 ### Changed
 
 - Language server capability check now probes `MAGO_EXPERIMENTAL_SERVER=1 mago language-server --help` (exit-code based) instead of grepping `mago --help` output for the string `language-server`. The subcommand is intentionally hidden from help output in current Mago builds, so the old string-match always failed.

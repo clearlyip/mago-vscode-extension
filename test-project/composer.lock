@@ -4,21 +4,21 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "38f18afc5a1d9cb2b8a2940330353ae4",
+    "content-hash": "f94e90188d593bc87fc151262957a0e7",
     "packages": [],
     "packages-dev": [
         {
             "name": "carthage-software/mago",
-            "version": "1.29.0",
+            "version": "1.30.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/carthage-software/mago.git",
-                "reference": "8aab53f6d004f9a6e85128c365d3d28737fdb272"
+                "reference": "0e8a3644d974984069fa27b0ffbb44123b1b74cd"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/carthage-software/mago/zipball/8aab53f6d004f9a6e85128c365d3d28737fdb272",
-                "reference": "8aab53f6d004f9a6e85128c365d3d28737fdb272",
+                "url": "https://api.github.com/repos/carthage-software/mago/zipball/0e8a3644d974984069fa27b0ffbb44123b1b74cd",
+                "reference": "0e8a3644d974984069fa27b0ffbb44123b1b74cd",
                 "shasum": ""
             },
             "require": {
@@ -56,7 +56,7 @@
             ],
             "support": {
                 "issues": "https://github.com/carthage-software/mago/issues",
-                "source": "https://github.com/carthage-software/mago/tree/1.29.0"
+                "source": "https://github.com/carthage-software/mago/tree/1.30.0"
             },
             "funding": [
                 {
@@ -64,7 +64,7 @@
                     "type": "github"
                 }
             ],
-            "time": "2026-05-23T18:53:33+00:00"
+            "time": "2026-06-04T15:46:37+00:00"
         },
         {
             "name": "clearlyip/mago-lsp",
@@ -72,7 +72,7 @@
             "dist": {
                 "type": "path",
                 "url": "..",
-                "reference": "d88e7ec40ee69962cad40d0632915dcd478bb7be"
+                "reference": "f2ee7b9144b41728bd5e70ca0c947f7205f51b98"
             },
             "require": {
                 "composer-plugin-api": "^2.0",
@@ -130,6 +130,9 @@
             ],
             "description": "Installs the Mago language-server binary (built with --features language-server) into vendor/bin/mago-lsp.",
             "homepage": "https://github.com/clearlyip/mago-vscode-extension",
+            "keywords": [
+                "dev"
+            ],
             "support": {
                 "issues": "https://github.com/clearlyip/mago-vscode-extension/issues",
                 "source": "https://github.com/clearlyip/mago-vscode-extension"

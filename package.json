@@ -134,6 +134,12 @@
           "description": "Disable client-side file filtering based on mago.toml source.paths and source.excludes. When enabled, all PHP file notifications are forwarded to the language server, matching Mago's default behaviour.",
           "scope": "window"
         },
+        "mago.suppressExperimentalWarning": {
+          "type": "boolean",
+          "default": false,
+          "description": "Suppress the warning popup shown at startup reminding you that the Mago language server is experimental and has no stability guarantees.",
+          "scope": "application"
+        },
         "mago.trace.server": {
           "type": "string",
           "enum": [

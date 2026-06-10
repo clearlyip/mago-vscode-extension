@@ -26,7 +26,7 @@
     "mago": "mago"
   },
   "require-dev": {
-    "carthage-software/mago": "^1.29.0",
+    "carthage-software/mago": "^1.30.0",
     "clearlyip/mago-lsp": "dev-master"
   }
 }

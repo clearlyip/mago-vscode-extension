@@ -46,6 +46,24 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
     checkForConflicts(logger);
 
+    if (!config.get<boolean>('suppressExperimentalWarning')) {
+        vscode.window
+            .showWarningMessage(
+                'The Mago language server is a work in progress. ' +
+                    'The set of advertised capabilities, the wire behaviour, the flags, and even the existence of this subcommand ' +
+                    'can change or disappear without notice. ' +
+                    'There are no compatibility guarantees until mago 2.0. ' +
+                    'If you need a stable editor integration, wait for that release.',
+                'Dismiss',
+                "Don't show again",
+            )
+            .then((action) => {
+                if (action === "Don't show again") {
+                    config.update('suppressExperimentalWarning', true, vscode.ConfigurationTarget.Global);
+                }
+            });
+    }
+
     const workspaceFolders = vscode.workspace.workspaceFolders;
     if (!workspaceFolders || workspaceFolders.length === 0) {
         logger.logError('Mago requires an open workspace folder');

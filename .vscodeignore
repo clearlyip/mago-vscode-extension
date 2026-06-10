@@ -17,3 +17,5 @@ docs/**
 vendor/**
 composer.lock
 .claude/**
+patches/**
+.actrc
