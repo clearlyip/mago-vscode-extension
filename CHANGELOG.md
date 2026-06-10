@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-06-10
+
+### Changed
+
+- Language server capability check now probes `MAGO_EXPERIMENTAL_SERVER=1 mago language-server --help` (exit-code based) instead of grepping `mago --help` output for the string `language-server`. The subcommand is intentionally hidden from help output in current Mago builds, so the old string-match always failed.
+- `MAGO_EXPERIMENTAL_SERVER=1` is now set in the environment when spawning the language server process, as required by the current Mago build.
+
+### Build
+
+- CI workflow now checks out the upstream Mago release tag, merges the `feat/language-server` branch on top of it, and applies any `.patch` files from the `patches/` directory before compiling. This replaces the previous `--features language-server` compile flag (removed upstream).
+- Added `patches/0001-fix-database-configuration-patches-field.patch` to initialize the `patches` field added to `DatabaseConfiguration` in Mago 1.30.0, which the `feat/language-server` branch did not yet handle.
+
 ## [0.9.5] - 2026-05-29
 
 ### Added

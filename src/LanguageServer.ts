@@ -95,12 +95,12 @@ function isPhpLauncherScript(execPath: string): boolean {
 }
 
 /**
- * Returns true when the binary at `execPath` was compiled with the
- * `language-server` feature, i.e. `mago --help` lists `language-server`
- * as an available subcommand.
+ * Returns true when the binary at `execPath` supports the `language-server`
+ * subcommand. The subcommand is gated behind the MAGO_EXPERIMENTAL_SERVER
+ * environment variable and is intentionally hidden from `--help` output, so
+ * we probe it directly: if `MAGO_EXPERIMENTAL_SERVER=1 mago language-server
+ * --help` exits 0 the subcommand exists; a non-zero exit means it doesn't.
  *
- * A binary built without `--features language-server` simply omits the
- * subcommand from its help output, so this is the canonical pre-flight check.
  * `timeoutMs` defaults to 5 s for native binaries; callers should pass a
  * much larger value when the path is a PHP launcher that may need to download
  * the binary on first run.
@@ -109,11 +109,10 @@ function hasLanguageServerSupport(execPath: string, timeoutMs = 5_000): Promise<
     return new Promise((resolve) => {
         execFile(
             execPath,
-            ['--help'],
-            { timeout: timeoutMs, env: { ...process.env, NO_COLOR: '1' } },
-            (_err, stdout, stderr) => {
-                // mago prints help to stdout; some versions may use stderr
-                resolve((stdout + stderr).includes('language-server'));
+            ['language-server', '--help'],
+            { timeout: timeoutMs, env: { ...process.env, NO_COLOR: '1', MAGO_EXPERIMENTAL_SERVER: '1' } },
+            (err) => {
+                resolve(!err);
             },
         );
     });
@@ -252,11 +251,9 @@ export class LanguageServer {
         if (!(await hasLanguageServerSupport(execPath, phpLauncher ? 300_000 : 5_000))) {
             const msg =
                 `The mago binary at "${execPath}" does not support the language-server subcommand. ` +
-                `It must be compiled with --features language-server.\n\n` +
                 `Install the LSP-enabled binary via Composer:\n` +
                 `  composer require clearlyip/mago-lsp\n\n` +
-                `Or build from source:\n` +
-                `  cargo install mago --features language-server`;
+                `Or download a pre-built binary with language-server support from the releases page.`;
             this.logger.logError(msg);
             this.statusBar.update(ServerStatus.Error, 'no language-server');
             vscode.window
@@ -451,8 +448,8 @@ export class LanguageServer {
                 cwd,
                 env: {
                     ...process.env,
-                    // Disable color codes in server output
                     NO_COLOR: '1',
+                    MAGO_EXPERIMENTAL_SERVER: '1',
                 },
             });
 
