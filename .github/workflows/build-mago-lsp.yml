@@ -24,7 +24,7 @@ jobs:
       - name: Resolve target version
         id: resolve
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           if [[ -n "${{ inputs.version }}" ]]; then
             VERSION="${{ inputs.version }}"
@@ -37,7 +37,7 @@ jobs:
       - name: Check if this version is already released here
         id: compare
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           VERSION="${{ steps.resolve.outputs.version }}"
           STATUS=$(gh api \
@@ -132,11 +132,6 @@ jobs:
             }
 
     steps:
-      - name: Checkout this repo (for patches)
-        uses: actions/checkout@v6
-        with:
-          path: _this_repo
-
       - name: Checkout mago ${{ env.VERSION }} with language-server feature
         run: |
           git clone https://github.com/carthage-software/mago.git .
@@ -144,13 +139,16 @@ jobs:
           git fetch origin feat/language-server
           git merge --no-edit origin/feat/language-server
 
-      - name: Apply local patches
+      - name: Apply patches from this repo
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          for p in _this_repo/patches/*.patch; do
-            echo "Applying $p"
-            git apply "$p"
+          gh api "repos/${{ github.repository }}/contents/patches?ref=${{ github.sha }}" \
+            --jq '.[] | .name + "\t" + .download_url' |
+          while IFS=$'\t' read -r name url; do
+            echo "Applying $name"
+            curl -sSfL -H "Authorization: Bearer $GH_TOKEN" "$url" | git apply
           done
-          rm -rf _this_repo
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -273,4 +271,4 @@ jobs:
             Full changelog and release notes: [carthage-software/mago@${{ needs.check.outputs.version }}](https://github.com/carthage-software/mago/releases/tag/${{ needs.check.outputs.version }})
           files: artifacts/*
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
