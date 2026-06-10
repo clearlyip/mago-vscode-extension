@@ -133,6 +133,7 @@ jobs:
 
     steps:
       - name: Checkout mago ${{ env.VERSION }} with language-server feature
+        shell: bash
         run: |
           git clone https://github.com/carthage-software/mago.git .
           git checkout ${{ env.VERSION }}
@@ -140,6 +141,7 @@ jobs:
           git merge --no-edit origin/feat/language-server
 
       - name: Apply patches from this repo
+        shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
