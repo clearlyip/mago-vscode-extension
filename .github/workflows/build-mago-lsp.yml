@@ -132,11 +132,12 @@ jobs:
             }
 
     steps:
-      - name: Checkout mago ${{ env.VERSION }}
-        uses: actions/checkout@v6
-        with:
-          repository: carthage-software/mago
-          ref: ${{ env.VERSION }}
+      - name: Checkout mago ${{ env.VERSION }} with language-server feature
+        run: |
+          git clone https://github.com/carthage-software/mago.git .
+          git checkout ${{ env.VERSION }}
+          git fetch origin feat/language-server
+          git merge --no-edit origin/feat/language-server
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -161,14 +162,13 @@ jobs:
         shell: bash
         run: echo "BUILD_CMD=cross" >> "$GITHUB_ENV"
 
-      - name: Build with language-server feature
+      - name: Build
         shell: bash
         run: |
           $BUILD_CMD build \
             --locked \
             --release \
-            --target ${{ matrix.job.target }} \
-            --features language-server
+            --target ${{ matrix.job.target }}
 
       - name: Package binary
         id: package
