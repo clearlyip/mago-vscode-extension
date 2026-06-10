@@ -7,3 +7,5 @@ test-project/vendor/
 .claude
 test-project/composer.lock
 .actrc
+plugin/bin/**
+!plugin/bin/mago-lsp
