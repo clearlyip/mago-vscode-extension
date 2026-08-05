@@ -10,6 +10,10 @@ on:
         description: "Mago version tag to build (e.g. 1.29.0). Leave empty to use latest."
         required: false
         default: ""
+      release_tag:
+        description: "Tag to publish under. Leave empty to use the mago version. Immutable releases burn a tag name permanently, so a version whose release was published and then deleted needs a suffixed tag here (e.g. 1.45.0-lsp.1)."
+        required: false
+        default: ""
 
 jobs:
   # ─── Phase 1: decide whether anything needs building ─────────────────────────
@@ -18,6 +22,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.resolve.outputs.version }}
+      release_tag: ${{ steps.resolve.outputs.release_tag }}
       should_build: ${{ steps.compare.outputs.should_build }}
 
     steps:
@@ -31,23 +36,26 @@ jobs:
           else
             VERSION=$(gh api repos/carthage-software/mago/releases/latest --jq '.tag_name')
           fi
+          RELEASE_TAG="${{ inputs.release_tag }}"
+          RELEASE_TAG="${RELEASE_TAG:-$VERSION}"
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
-          echo "Targeting mago ${VERSION}"
+          echo "release_tag=${RELEASE_TAG}" >> "$GITHUB_OUTPUT"
+          echo "Targeting mago ${VERSION}, publishing as ${RELEASE_TAG}"
 
       - name: Check if this version is already released here
         id: compare
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          VERSION="${{ steps.resolve.outputs.version }}"
+          RELEASE_TAG="${{ steps.resolve.outputs.release_tag }}"
           STATUS=$(gh api \
-            "repos/${{ github.repository }}/releases/tags/${VERSION}" \
+            "repos/${{ github.repository }}/releases/tags/${RELEASE_TAG}" \
             --silent 2>&1 && echo "exists" || echo "missing")
           if [[ "$STATUS" == "exists" ]]; then
-            echo "Release ${VERSION} already exists — skipping build."
+            echo "Release ${RELEASE_TAG} already exists — skipping build."
             echo "should_build=false" >> "$GITHUB_OUTPUT"
           else
-            echo "Release ${VERSION} not found — will build."
+            echo "Release ${RELEASE_TAG} not found — will build."
             echo "should_build=true" >> "$GITHUB_OUTPUT"
           fi
 
@@ -60,6 +68,7 @@ jobs:
 
     env:
       VERSION: ${{ needs.check.outputs.version }}
+      RELEASE_TAG: ${{ needs.check.outputs.release_tag }}
       BUILD_CMD: cargo
 
     strategy:
@@ -240,7 +249,9 @@ jobs:
           esac
 
           BIN="target/${TARGET}/release/mago${EXE}"
-          PKG_NAME="mago-lsp-${VERSION}-${TARGET}${PKG_EXT}"
+          # Named after the release tag, not the mago version: the Composer plugin derives both the
+          # tag and the archive name from the same string (see plugin/src/internal.php).
+          PKG_NAME="mago-lsp-${RELEASE_TAG}-${TARGET}${PKG_EXT}"
 
           mkdir -p staging
           cp "$BIN" "staging/mago${EXE}"
@@ -277,42 +288,73 @@ jobs:
           path: artifacts/
           merge-multiple: true
 
-      - name: Create release
-        uses: softprops/action-gh-release@v3
-        with:
-          tag_name: ${{ needs.check.outputs.version }}
-          name: "mago ${{ needs.check.outputs.version }} (language-server)"
-          # Mark pre-release: the LSP feature has no stability guarantees before mago 2.0
-          prerelease: true
-          body: |
-            Mago `${{ needs.check.outputs.version }}` merged with https://github.com/carthage-software/mago/pull/1926.
-
-            > **Stability notice:** The Mago language server is a work in progress. The set of advertised capabilities, the wire behavior, the flags, and even the existence of this subcommand can change or disappear without notice. There are no compatibility guarantees until mago 2.0. If you need a stable editor integration, wait for that release.
-
-            ## Installation
-
-            1. Download the archive for your platform and extract the `mago` binary.
-            2. Place it somewhere on your `PATH` (or note its full path).
-            3. In VS Code, set `mago.executablePath` to the path of this binary.
-
-            ## Platforms
-
-            | Archive | Platform |
-            |---|---|
-            | `mago-lsp-*-x86_64-pc-windows-msvc.zip` | Windows x64 (MSVC) |
-            | `mago-lsp-*-x86_64-pc-windows-gnu.tar.gz` | Windows x64 (MinGW) |
-            | `mago-lsp-*-aarch64-apple-darwin.tar.gz` | macOS Apple Silicon |
-            | `mago-lsp-*-x86_64-apple-darwin.tar.gz` | macOS Intel |
-            | `mago-lsp-*-x86_64-unknown-linux-gnu.tar.gz` | Linux x64 (glibc) |
-            | `mago-lsp-*-x86_64-unknown-linux-musl.tar.gz` | Linux x64 (musl, static) |
-            | `mago-lsp-*-aarch64-unknown-linux-gnu.tar.gz` | Linux ARM64 (glibc) |
-            | `mago-lsp-*-aarch64-unknown-linux-musl.tar.gz` | Linux ARM64 (musl, static) |
-            | `mago-lsp-*-x86_64-unknown-freebsd.tar.gz` | FreeBSD x64 |
-            | *(arm/armv7 archives)* | Raspberry Pi / embedded Linux |
-
-            ## Upstream
-
-            Full changelog and release notes: [carthage-software/mago@${{ needs.check.outputs.version }}](https://github.com/carthage-software/mago/releases/tag/${{ needs.check.outputs.version }})
-          files: artifacts/*
+      - name: Write release notes
         env:
-          GITHUB_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.check.outputs.version }}
+          RELEASE_TAG: ${{ needs.check.outputs.release_tag }}
+        run: |
+          # Quoted heredoc: the notes are full of backticks, so nothing in here may be expanded.
+          cat > notes.md <<'EOF'
+          Mago `__VERSION__` merged with https://github.com/carthage-software/mago/pull/1926.
+
+          > **Stability notice:** The Mago language server is a work in progress. The set of advertised capabilities, the wire behavior, the flags, and even the existence of this subcommand can change or disappear without notice. There are no compatibility guarantees until mago 2.0. If you need a stable editor integration, wait for that release.
+
+          ## Installation
+
+          1. Download the archive for your platform and extract the `mago` binary.
+          2. Place it somewhere on your `PATH` (or note its full path).
+          3. In VS Code, set `mago.executablePath` to the path of this binary.
+
+          ## Platforms
+
+          | Archive | Platform |
+          |---|---|
+          | `mago-lsp-*-x86_64-pc-windows-msvc.zip` | Windows x64 (MSVC) |
+          | `mago-lsp-*-x86_64-pc-windows-gnu.tar.gz` | Windows x64 (MinGW) |
+          | `mago-lsp-*-aarch64-apple-darwin.tar.gz` | macOS Apple Silicon |
+          | `mago-lsp-*-x86_64-apple-darwin.tar.gz` | macOS Intel |
+          | `mago-lsp-*-x86_64-unknown-linux-gnu.tar.gz` | Linux x64 (glibc) |
+          | `mago-lsp-*-x86_64-unknown-linux-musl.tar.gz` | Linux x64 (musl, static) |
+          | `mago-lsp-*-aarch64-unknown-linux-gnu.tar.gz` | Linux ARM64 (glibc) |
+          | `mago-lsp-*-aarch64-unknown-linux-musl.tar.gz` | Linux ARM64 (musl, static) |
+          | `mago-lsp-*-x86_64-unknown-freebsd.tar.gz` | FreeBSD x64 |
+          | *(arm/armv7 archives)* | Raspberry Pi / embedded Linux |
+
+          ## Upstream
+
+          Full changelog and release notes: [carthage-software/mago@__VERSION__](https://github.com/carthage-software/mago/releases/tag/__VERSION__)
+          EOF
+          sed -i "s|__VERSION__|${VERSION}|g" notes.md
+
+          if [[ "$RELEASE_TAG" != "$VERSION" ]]; then
+            {
+              printf '\n---\n\n'
+              printf 'Published under `%s` rather than `%s`: the plain tag was consumed by an earlier ' "$RELEASE_TAG" "$VERSION"
+              printf 'immutable release and GitHub reserves those names permanently. The archives are named to match, '
+              printf 'so set `MAGO_LSP_BINARY_VERSION=%s` when pinning the Composer plugin.\n' "$RELEASE_TAG"
+            } >> notes.md
+          fi
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.check.outputs.version }}
+          RELEASE_TAG: ${{ needs.check.outputs.release_tag }}
+        run: |
+          # A run that died between creating and publishing leaves a draft behind. Drafts carry no
+          # tag and are not immutable, so clearing one out is safe — a published release is not.
+          if [[ "$(gh release view "$RELEASE_TAG" --json isDraft --jq .isDraft 2>/dev/null)" == "true" ]]; then
+            echo "Deleting leftover draft for ${RELEASE_TAG}"
+            gh release delete "$RELEASE_TAG" --yes
+          fi
+
+          # Immutable releases freeze a release the moment it is published, so every asset has to be
+          # attached while it is still a draft. Publishing is what creates the tag.
+          gh release create "$RELEASE_TAG" artifacts/* \
+            --draft \
+            --prerelease \
+            --target "$GITHUB_SHA" \
+            --title "mago ${VERSION} (language-server)" \
+            --notes-file notes.md
+
+          gh release edit "$RELEASE_TAG" --draft=false

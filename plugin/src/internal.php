@@ -65,7 +65,7 @@ const STATUS_CHECK_INTERVAL = 10_000;
 
 /** The binary version to download. Decoupled from the Composer package version so that
  *  point releases of the package do not require new binary artifacts on GitHub. */
-const BINARY_VERSION = '1.30.0';
+const BINARY_VERSION = '1.45.0-lsp.1';
 
 /**
  * Resolves the binary version to download.
