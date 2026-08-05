@@ -134,11 +134,54 @@ jobs:
     steps:
       - name: Checkout mago ${{ env.VERSION }} with language-server feature
         shell: bash
+        env:
+          # Runners have no git identity of their own, and the merge needs to create a commit.
+          GIT_AUTHOR_NAME: github-actions[bot]
+          GIT_AUTHOR_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
+          GIT_COMMITTER_NAME: github-actions[bot]
+          GIT_COMMITTER_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
         run: |
           git clone https://github.com/carthage-software/mago.git .
           git checkout ${{ env.VERSION }}
           git fetch origin feat/language-server
-          git merge --no-edit origin/feat/language-server
+
+          if git merge --no-edit origin/feat/language-server; then
+            exit 0
+          fi
+
+          # The language-server branch is cut from an older release, so its `[workspace.dependencies]`
+          # table pins every mago crate to that older version and conflicts with the release tag on
+          # every single line. Nothing else is expected to conflict — bail out loudly if it does.
+          CONFLICTS=$(git diff --name-only --diff-filter=U)
+          if [[ "$CONFLICTS" != "Cargo.toml" ]]; then
+            echo "::error::Unexpected merge conflicts, resolve them upstream or add a patch:"
+            echo "$CONFLICTS"
+            exit 1
+          fi
+
+          # Keep the release tag's side of every conflicting hunk (the crate versions have to match
+          # `workspace.package.version`), then re-add the entries that only the branch has — today
+          # that is `mago-server` — rewritten to the release version.
+          git show :1:Cargo.toml > /tmp/cargo-base.toml
+          git show :2:Cargo.toml > /tmp/cargo-ours.toml
+          git show :3:Cargo.toml > /tmp/cargo-theirs.toml
+          git merge-file --ours -p /tmp/cargo-ours.toml /tmp/cargo-base.toml /tmp/cargo-theirs.toml > Cargo.toml
+
+          grep -E '^mago-[a-z0-9-]+ = \{ path = "crates/' /tmp/cargo-theirs.toml > /tmp/branch-deps.txt || true
+          while read -r line; do
+            name=${line%% *}
+            if grep -q "^${name} = { path = " Cargo.toml; then
+              continue
+            fi
+            entry=$(printf '%s\n' "$line" | sed -E "s/version = \"[^\"]*\"/version = \"${VERSION}\"/")
+            awk -v entry="$entry" '/^\[workspace\.dependencies\]$/ { print; print entry; next } { print }' \
+              Cargo.toml > /tmp/cargo-merged.toml
+            mv /tmp/cargo-merged.toml Cargo.toml
+            echo "Re-added branch-only workspace dependency: ${entry}"
+          done < /tmp/branch-deps.txt
+
+          git add Cargo.toml
+          git commit --no-edit
 
       - name: Apply patches from this repo
         shell: bash
@@ -178,8 +221,9 @@ jobs:
       - name: Build
         shell: bash
         run: |
+          # No --locked: the merged Cargo.lock still carries the language-server branch's older
+          # version for the crates it adds, so cargo has to refresh those workspace entries.
           $BUILD_CMD build \
-            --locked \
             --release \
             --target ${{ matrix.job.target }}
 
