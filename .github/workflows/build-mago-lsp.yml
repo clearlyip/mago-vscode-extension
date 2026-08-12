@@ -338,6 +338,9 @@ jobs:
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
+          # This job never checks out the repo, so gh has no git remote to infer the
+          # target from. Without this, every gh release call dies on "not a git repository".
+          GH_REPO: ${{ github.repository }}
           VERSION: ${{ needs.check.outputs.version }}
           RELEASE_TAG: ${{ needs.check.outputs.release_tag }}
         run: |
