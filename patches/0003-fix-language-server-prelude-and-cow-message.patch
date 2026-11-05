@@ -1,0 +1,34 @@
+diff --git a/src/language_server/diagnostics.rs b/src/language_server/diagnostics.rs
+index 7e40442ef..a938061c7 100644
+--- a/src/language_server/diagnostics.rs
++++ b/src/language_server/diagnostics.rs
+@@ -81,7 +81,7 @@ fn push_issue(database: &Database<'_>, by_url: &mut HashMap<Uri, Vec<Diagnostic>
+ }
+ 
+ fn render_message(issue: &Issue) -> String {
+-    let mut out = issue.message.clone();
++    let mut out = issue.message.to_string();
+     for note in &issue.notes {
+         out.push_str("\n\nnote: ");
+         out.push_str(note);
+diff --git a/src/language_server/state.rs b/src/language_server/state.rs
+index bc6577a60..1a891d844 100644
+--- a/src/language_server/state.rs
++++ b/src/language_server/state.rs
+@@ -40,7 +40,6 @@ use mago_server::Server;
+ use mago_server::Settings as ServerSettings;
+ 
+ use crate::config::Configuration;
+-use crate::consts::PRELUDE_BYTES;
+ use crate::language_server::ServerConfig;
+ use crate::language_server::document::OpenDocument;
+ 
+@@ -161,7 +160,7 @@ pub fn build_workspace(
+     server_config: Arc<ServerConfig>,
+ ) -> Result<(WorkspaceState, AnalysisResult), String> {
+     let root = root.canonicalize().unwrap_or(root);
+-    let prelude = Prelude::decode(PRELUDE_BYTES).map_err(|e| format!("decode prelude: {e}"))?;
++    let prelude = crate::prelude::load();
+     let Prelude { database: prelude_db, metadata, symbol_references } = prelude;
+ 
+     let configuration = resolve_workspace_configuration(&root, &server_config);
