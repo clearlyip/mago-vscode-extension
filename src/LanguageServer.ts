@@ -152,6 +152,12 @@ export class LanguageServer {
     private client: LanguageClient | null = null;
     private workspacePath: string;
     private starting = false;
+    private disposed = false;
+    // Every start/stop/restart runs through this chain so two lifecycle operations never overlap.
+    // Overlapping restarts used to each create a LanguageClient, overwriting `this.client` and
+    // orphaning the earlier ones: their servers kept running and their error handlers respawned them.
+    private lifecycle: Promise<unknown> = Promise.resolve();
+    private pendingRestart: Promise<boolean> | null = null;
 
     constructor(
         workspacePath: string,
@@ -173,7 +179,23 @@ export class LanguageServer {
         return this.starting;
     }
 
-    async start(): Promise<boolean> {
+    private enqueue<T>(op: () => Promise<T>): Promise<T> {
+        const run = this.lifecycle.then(op, op);
+        this.lifecycle = run.catch(() => undefined);
+        return run;
+    }
+
+    start(): Promise<boolean> {
+        return this.enqueue(() => this.doStart());
+    }
+
+    private async doStart(): Promise<boolean> {
+        if (this.disposed) {
+            return false;
+        }
+        // Never leave a previous client behind when starting a new one.
+        await this.doStop();
+
         const config = vscode.workspace.getConfiguration('mago');
 
         const configuredWorkspace = config.get<string>('workspace');
@@ -386,19 +408,56 @@ export class LanguageServer {
         }
     }
 
-    async stop(): Promise<void> {
-        if (this.client) {
-            this.logger.logInfo('Stopping Mago language server');
-            this.statusBar.update(ServerStatus.Stopped, 'stopped');
-            await this.client.stop();
-            this.client = null;
+    stop(): Promise<void> {
+        return this.enqueue(() => this.doStop());
+    }
+
+    private async doStop(): Promise<void> {
+        const client = this.client;
+        if (!client) {
+            return;
+        }
+        // Drop the reference first so a failing or slow stop() cannot leave a stale client behind.
+        this.client = null;
+        this.logger.logInfo('Stopping Mago language server');
+        this.statusBar.update(ServerStatus.Stopped, 'stopped');
+        try {
+            await client.stop();
+        } catch (err) {
+            this.logger.logWarn(`Language server did not stop cleanly: ${err}`);
+        } finally {
+            // Release the client even when stop() failed, so its error handler can no longer respawn the server.
+            try {
+                await client.dispose();
+            } catch (err) {
+                this.logger.logWarn(`Failed to dispose language client: ${err}`);
+            }
         }
     }
 
-    async restart(): Promise<boolean> {
-        this.logger.logInfo('Restarting Mago language server');
+    /**
+     * Restart the server. Restarts requested while one is already queued share that queued run, so a
+     * burst of triggers (file watcher events, editor switches) produces a single restart. A request
+     * that arrives while a restart is executing queues one more, since its trigger may be newer.
+     */
+    restart(): Promise<boolean> {
+        if (this.pendingRestart) {
+            return this.pendingRestart;
+        }
+        const run = this.enqueue(async () => {
+            this.pendingRestart = null;
+            this.logger.logInfo('Restarting Mago language server');
+            await this.doStop();
+            return this.doStart();
+        });
+        this.pendingRestart = run;
+        return run;
+    }
+
+    /** Stop the server for good: nothing queued behind this call may start it again. */
+    async dispose(): Promise<void> {
+        this.disposed = true;
         await this.stop();
-        return this.start();
     }
 
     getClient(): LanguageClient | null {

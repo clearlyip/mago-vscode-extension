@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Leaked `mago` language server processes: overlapping restarts (for example a burst of `mago.toml` watcher events) each created a new language client and orphaned the previous ones, which then kept running and respawned themselves. Start, stop and restart are now serialized, and queued restarts are coalesced.
+- `mago.toml` files under `vendor/`, `node_modules/` and `.git/` no longer restart the server, and watcher events are debounced.
+- The language server is now stopped explicitly on deactivate, and a failed `stop()` no longer leaves a stale client behind.
+- CI: add patch `0002` so the merged `mago-server` crate compiles against mago 1.59.0, where `Issue::message` and `Issue::help` are `Cow<str>`.
+
 ## [0.10.0] - 2026-06-10
 
 ### Added

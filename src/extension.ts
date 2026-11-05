@@ -8,6 +8,10 @@ import { ServerStatus, StatusBar } from './StatusBar';
 // Other VS Code extensions that also activate on PHP files and invoke the mago
 // binary directly. Running more than one simultaneously causes doubled
 // diagnostics and competing mago processes on every save.
+const RESTART_DEBOUNCE_MS = 500;
+
+let activeServer: LanguageServer | undefined;
+
 const CONFLICTING_EXTENSIONS: { id: string; name: string }[] = [
     { id: 'Michael4d45.mago-vscode', name: 'Mago (Michael4d45)' },
     { id: 'kgz.mago-unofficial', name: 'Mago Unofficial (kgz)' },
@@ -78,6 +82,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     };
 
     const server = new LanguageServer(getWorkspacePath(), statusBar, logger);
+    activeServer = server;
+    context.subscriptions.push({ dispose: () => void server.dispose() });
 
     registerCommands(server, logger, context);
 
@@ -124,21 +130,40 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
               )
             : new vscode.RelativePattern(workspaceFolders[0].uri, explicitConfigPath)
         : '**/mago.toml';
-    const configLabel = explicitConfigPath ?? 'mago.toml';
+    const configLabel = explicitConfigPath || 'mago.toml';
     const tomlWatcher = vscode.workspace.createFileSystemWatcher(tomlPattern);
     context.subscriptions.push(tomlWatcher);
-    tomlWatcher.onDidChange(async () => {
-        logger.logInfo(`${configLabel} changed, restarting server`);
-        await server.restart();
+
+    // A mago.toml that lives in vendor/ or node_modules/ is a dependency's, never ours. Without this
+    // filter, installing packages fires a burst of events that restarts the server over and over.
+    const isIgnoredConfig = (uri: vscode.Uri): boolean =>
+        !explicitConfigPath && /(^|[\\/])(vendor|node_modules|\.git)[\\/]/.test(uri.fsPath);
+
+    // Coalesce bursts of watcher events into a single restart.
+    let restartTimer: NodeJS.Timeout | undefined;
+    const scheduleRestart = (uri: vscode.Uri, event: string): void => {
+        if (isIgnoredConfig(uri)) {
+            return;
+        }
+        logger.logInfo(`${configLabel} ${event}, restarting server`);
+        if (restartTimer) {
+            clearTimeout(restartTimer);
+        }
+        restartTimer = setTimeout(() => {
+            restartTimer = undefined;
+            void server.restart();
+        }, RESTART_DEBOUNCE_MS);
+    };
+    context.subscriptions.push({
+        dispose: () => {
+            if (restartTimer) {
+                clearTimeout(restartTimer);
+            }
+        },
     });
-    tomlWatcher.onDidCreate(async () => {
-        logger.logInfo(`${configLabel} created, restarting server`);
-        await server.restart();
-    });
-    tomlWatcher.onDidDelete(async () => {
-        logger.logInfo(`${configLabel} deleted, restarting server`);
-        await server.restart();
-    });
+    tomlWatcher.onDidChange((uri) => scheduleRestart(uri, 'changed'));
+    tomlWatcher.onDidCreate((uri) => scheduleRestart(uri, 'created'));
+    tomlWatcher.onDidDelete((uri) => scheduleRestart(uri, 'deleted'));
 
     const started = await server.start();
 
@@ -148,6 +173,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 }
 
 export async function deactivate(): Promise<void> {
-    // The LanguageClient is stopped via its registered disposable when the
-    // extension host disposes context.subscriptions. Nothing extra needed.
+    // Await the stop here: disposables in context.subscriptions are not awaited by the host,
+    // so relying on them alone can leave the server process running after the extension exits.
+    await activeServer?.dispose();
+    activeServer = undefined;
 }
