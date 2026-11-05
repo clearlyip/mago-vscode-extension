@@ -189,6 +189,25 @@ jobs:
             echo "Re-added branch-only workspace dependency: ${entry}"
           done < /tmp/branch-deps.txt
 
+          # The same hunk resolution also drops the branch's additions to the root crate's own
+          # `[dependencies]` (tokio, tower-lsp-server, ...), which the in-tree `src/language_server`
+          # module needs. Re-add any that are missing; their `[workspace.dependencies]` entries
+          # already exist, so a name that does not resolve fails the build loudly.
+          root_deps() {
+            awk '/^\[dependencies\]$/ { f=1; next } /^\[/ { f=0 } f && /^[a-z0-9_-]+ = / { print }' "$1"
+          }
+          root_deps /tmp/cargo-theirs.toml > /tmp/branch-root-deps.txt
+          while read -r line; do
+            name=${line%% *}
+            if root_deps Cargo.toml | grep -q "^${name} = "; then
+              continue
+            fi
+            awk -v entry="$line" '/^\[dependencies\]$/ { print; print entry; next } { print }' \
+              Cargo.toml > /tmp/cargo-merged.toml
+            mv /tmp/cargo-merged.toml Cargo.toml
+            echo "Re-added branch-only root dependency: ${line}"
+          done < /tmp/branch-root-deps.txt
+
           git add Cargo.toml
           git commit --no-edit
 
