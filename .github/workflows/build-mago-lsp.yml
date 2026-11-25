@@ -161,11 +161,18 @@ jobs:
           # The language-server branch is cut from an older release, so its `[workspace.dependencies]`
           # table pins every mago crate to that older version and conflicts with the release tag on
           # every single line. Nothing else is expected to conflict — bail out loudly if it does.
-          CONFLICTS=$(git diff --name-only --diff-filter=U)
-          if [[ "$CONFLICTS" != "Cargo.toml" ]]; then
+          CONFLICTS=$(git diff --name-only --diff-filter=U | grep -vx -e 'Cargo.toml' -e 'Cargo.lock' || true)
+          if [[ -n "$CONFLICTS" ]]; then
             echo "::error::Unexpected merge conflicts, resolve them upstream or add a patch:"
             echo "$CONFLICTS"
             exit 1
+          fi
+
+          # Cargo.lock is generated: keep the release tag's copy and let the (unlocked) build add
+          # the branch-only crates and refresh the versions it pins.
+          if git diff --name-only --diff-filter=U | grep -qx 'Cargo.lock'; then
+            git checkout --ours Cargo.lock
+            git add Cargo.lock
           fi
 
           # Keep the release tag's side of every conflicting hunk (the crate versions have to match
